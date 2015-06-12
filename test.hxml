@@ -1,0 +1,8 @@
+-main Test
+
+-cp src
+-D test
+-lib format
+-lib strafe-core
+
+-cpp test

@@ -1,0 +1,5 @@
+*.ndll
+bin
+test
+test_results
+*.log

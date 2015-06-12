@@ -1,0 +1,55 @@
+<tests dir="assets/roms/test/">
+	<!-- CPU tests -->
+	<test rom="official_only.nes" hash="ece639d07ea7bf2a244cb05de4f1b272707d61c9"/>
+	<test rom="all_instrs.nes"/>
+	<test rom="cpu_timing_test.nes" hash="2ac1deee044da3e03850b0d07bba8f984c77b7df"/>
+	<test rom="cpu_interrupts.nes"/>
+	<test rom="cpu_dummy_reads.nes"/>
+	<test rom="instr_misc.nes"/>
+
+	<!-- branch timing -->
+	<test rom="1.Branch_Basics.nes" hash="8b98c90d1d94acfe0e47e5062f75b3865642542b"/>
+	<test rom="2.Backward_Branch.nes"/>
+	<test rom="3.Forward_Branch.nes"/>
+
+	<!-- PPU tests -->
+	<test rom="palette_ram.nes" hash="cb15f68f631c1d409beefb775bcff990286096fb"/>
+	<test rom="power_up_palette.nes" hash="cb15f68f631c1d409beefb775bcff990286096fb"/>
+	<test rom="sprite_ram.nes" hash="cb15f68f631c1d409beefb775bcff990286096fb"/>
+	<test rom="vbl_clear_time.nes" hash="cb15f68f631c1d409beefb775bcff990286096fb"/>
+	<test rom="vram_access.nes" hash="cb15f68f631c1d409beefb775bcff990286096fb"/>
+	<test rom="ppu_open_bus.nes" hash="ea83406f55e226ffc5b41b5a929fc524f91972b4"/>
+	<test rom="test_cpu_exec_space_ppuio.nes" hash="15e3371e98fca10cda2299c7d320877b3b57338d"/>
+
+	<!-- sprite 0 -->
+	<test rom="01.basics.nes" hash="1437c48bb22dd3be0d37449171d2120e13877326"/>
+	<test rom="02.alignment.nes" hash="33815f5682dda683d1a9fe7495f6358c0e741a9d"/>
+	<test rom="03.corners.nes" hash="760203cab0bc4df16bda48438f67a91e8a152fb9"/>
+	<test rom="04.flip.nes" hash="e16e43e5efdeacfd999a8ea031fa5058ec202f96"/>
+	<test rom="05.left_clip.nes" hash="b3c1819b0be1e6414b2ce82848b7bf6aee4c804b"/>
+	<test rom="06.right_edge.nes" hash="7e1fb54a17c12db9c74f3f90f044b0fb720d37ba"/>
+	<test rom="07.screen_bottom.nes" hash="25211cff3c6174e7f513f50ac3a1973af8829bfa"/>
+	<test rom="08.double_height.nes" hash="44f90bf465aa414b6060dd9334f23f06ddb8a706"/>
+	<test rom="09.timing_basics.nes" hash="8181cf59e33e437efc321e3fc21f0cbb73214605"/>
+	<test rom="10.timing_order.nes" hash="065fb7b9b2786bcdf807fe38c5b7f2aa2e4867fa"/>
+	<test rom="11.edge_timing.nes" hash="2570c06f6b508383fa9a6e8ff0dc91a81b6a9118"/>
+
+	<!-- vbl and nmi -->
+	<test rom="1.frame_basics.nes" hash="508c5ae4888fab7a2f132289b3930cf2f41d00d9"/>
+	<test rom="2.vbl_timing.nes" hash="5541a55c449a531ff521167ec674cacede04f9a0"/>
+	<test rom="3.even_odd_frames.nes" hash="621bfe8cfe4eda4311d45fc604ae538df2c40f98"/>
+	<test rom="4.vbl_clear_timing.nes" hash="f10af41650323eab4e089256ba1f60be839d9415"/>
+	<test rom="5.nmi_suppression.nes" hash="f3bef94e15e747a62d190096ba3d8cb9047b38ca"/>
+	<test rom="6.nmi_disable.nes"/>
+	<test rom="7.nmi_timing.nes"/>
+
+	<!-- sprite overflow -->
+	<test rom="1.Basics.nes" hash="5ca7744ab0c2c2e1840aabe18f68b602aba47ff0"/>
+	<test rom="2.Details.nes" hash="1eee5bf6f06e364ab9d5d274dc8519baefb8206b"/>
+	<test rom="3.Timing.nes"/>
+	<test rom="4.Obscure.nes"/>
+	<test rom="5.Emulator.nes" hash="18a440ced3f1efc9fb158e316f622ffc55896288"/>
+
+	<!-- apu tests -->
+	<test rom="apu_test.nes"/>
+</tests>
