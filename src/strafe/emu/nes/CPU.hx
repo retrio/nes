@@ -39,40 +39,40 @@ class CPU implements IState
 		this.ram = ram;
 	}
 
-	public function init(ppu:PPU)
+	public function init(nes:NES, ppu:PPU)
 	{
 		this.ppu = ppu;
 
 		for (i in 0 ... 0x800)
 		{
-			write(i, 0xff);
+			ram._ram.set(i, 0xff);
 		}
 
-		write(0x0008, 0xf7);
-		write(0x0009, 0xef);
-		write(0x000A, 0xdf);
-		write(0x000F, 0xbf);
+		ram._ram.set(0x0008, 0xf7);
+		ram._ram.set(0x0009, 0xef);
+		ram._ram.set(0x000A, 0xdf);
+		ram._ram.set(0x000F, 0xbf);
 
 		for (i in 0x4000 ...  0x4010)
 		{
-			write(i, 0);
+			nes.apu.write(i-0x4000, 0);
 		}
 
-		write(0x4015, 0);
-		write(0x4017, 0);
+		nes.apu.write(0x0015, 0);
+		nes.apu.write(0x0017, 0);
 
-		pc = (read(0xfffd) << 8) | read(0xfffc);
+		pc = (nes.mapper.read(0xfffd) << 8) | nes.mapper.read(0xfffc);
 	}
 
-	public function reset()
+	public function reset(nes:NES)
 	{
-		pc = (read(0xfffd) << 8) | read(0xfffc);
-		write(0x4015, 0);
-		write(0x4017, read(0x4017));
+		pc = (nes.mapper.read(0xfffd) << 8) | nes.mapper.read(0xfffc);
+		nes.apu.write(0x0015, 0);
+		nes.apu.write(0x0017, nes.apu.read(0x0017));
 		id = true;
 	}
 
-	public inline function suppressNmi()
+	public function suppressNmi()
 	{
 		nmiQueued = false;
 		if (nmi) prevNmi = true;

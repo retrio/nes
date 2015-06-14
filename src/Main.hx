@@ -10,18 +10,6 @@ class Main extends strafe.ui.openfl.Shell
 	{
 		super();
 
-		var fileName = "assets/roms/mario.nes";
-		var file = FileWrapper.read(fileName);
-
-		var controller = new strafe.ui.openfl.KeyboardController();
-
-		var plugin = new NESPlugin();
-		plugin.loadGame(file);
-		plugin.addController(controller);
-		plugin.start();
-
-		loadPlugin(plugin);
-
 #if (cpp && profile)
 		cpp.vm.Profiler.start();
 	}
@@ -49,5 +37,16 @@ class Main extends strafe.ui.openfl.Shell
 	static function main()
 	{
 		var m = new Main();
+	}
+
+	override function onStage(e:Dynamic)
+	{
+		super.onStage(e);
+
+		var plugin = new NESPlugin();
+		var controller = new strafe.ui.openfl.KeyboardController();
+		plugin.addController(controller);
+
+		loadPlugin(plugin);
 	}
 }

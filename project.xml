@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
-    <meta title="strafe" package="io.strafe" version="1.0.0" company="MonsterFace Games"/>
-    <app main="Main" path="bin" file="strafe"/>
-    <app path="bin-profile" if="profile"/>
-    <app path="bin-perflog" if="perflog"/>
-    <app path="bin-cputrace" if="cputrace"/>
-    <app path="bin-hash" if="hash"/>
-    <haxeflag name="--no-inline" if="debug"/>
-    <haxeflag name="--no-inline" if="profile"/>
-    <!--haxeflag name="--no-inline" if="advanced-telemetry"/-->
-    
-    <window fps="60" background="0x000000"/>
-    <window width="512" height="480"/>
-    <window width="0" height="0" if="mobile"/>
-    <window orientation="landscape" vsync="true"/>
-    <window resizable="true"/>
-    
-    <source path="src"/>
-    
-    <haxelib name="openfl"/>
-    <haxelib name="strafe-core"/>
+	<meta title="strafe" package="io.strafe" version="1.0.0" company="MonsterFace Games"/>
+	<app main="Main" path="bin" file="strafe"/>
+	<app path="bin-profile" if="profile"/>
+	<app path="bin-cputrace" if="cputrace"/>
+	<haxeflag name="--no-inline" if="debug"/>
+	<haxeflag name="--no-inline" if="profile"/>
+	<!--haxeflag name="--no-inline" if="advanced-telemetry"/-->
 
-    <assets path="assets"/>
-    
-    <haxedef name="HXCPP_STACK_TRACE" if="profile"/>
-    <haxedef name="HXCPP_STACK_LINE" if="profile"/>
+	<window fps="60" background="0x000000"/>
+	<window width="512" height="496"/>
+	<!--window width="0" height="0" if="mobile"/-->
+	<window orientation="landscape" vsync="true"/>
+	<window resizable="true"/>
+
+	<source path="src"/>
+
+	<haxelib name="format"/>
+	<haxelib name="systools" if="native"/>
+	<haxelib name="openfl"/>
+	<haxelib name="strafe-core"/>
+
+	<haxedef name="HXCPP_STACK_TRACE" if="profile"/>
+	<haxedef name="HXCPP_STACK_LINE" if="profile"/>
+
+	<assets path="assets/graphics" rename="graphics" include="*.png" type="image" embed="true"/>
 </project>

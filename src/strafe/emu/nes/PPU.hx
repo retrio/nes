@@ -88,6 +88,7 @@ class PPU implements IState
 	var sprpxl:Int = 0;
 	var found:Int = 0;
 	var sprite0here:Bool = false;
+	var suppress:Bool = false;
 
 	var enabled(get, never):Bool;
 	inline function get_enabled()
@@ -113,7 +114,7 @@ class PPU implements IState
 		for (i in 0 ... pal.length) pal.set(i, defaultPalette[i]);
 	}
 
-	public inline function read(addr:Int):Int
+	public function read(addr:Int):Int
 	{
 		var result:Int = 0;
 
@@ -128,7 +129,7 @@ class PPU implements IState
 						{
 							vblank = false;
 						}
-						cpu.suppressNmi();
+						suppress = true;
 					}
 				}
 
@@ -180,7 +181,7 @@ class PPU implements IState
 		return openBus;
 	}
 
-	public inline function write(addr:Int, data:Int)
+	public function write(addr:Int, data:Int)
 	{
 		openBus = data;
 		openBusDecayH = openBusDecayL = OPEN_BUS_DECAY_CYCLES;
@@ -199,8 +200,7 @@ class PPU implements IState
 				nmiEnabled = Util.getbit(data, 7);
 				if (!nmiEnabled)
 				{
-					cpu.nmi = false;
-					cpu.suppressNmi();
+					suppress = true;
 				}
 
 			case 1:
@@ -407,6 +407,13 @@ class PPU implements IState
 
 	inline function yieldToCPU()
 	{
+		if (suppress)
+		{
+			cpu.nmi = false;
+			cpu.suppressNmi();
+			suppress = false;
+		}
+
 		if ((div = (div + 1) % 3) == 0)
 		{
 			cpu.runCycle();

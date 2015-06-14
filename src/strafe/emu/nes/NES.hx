@@ -11,6 +11,8 @@ import strafe.emu.nes.ROM;
 
 class NES implements IEmulator implements IState
 {
+	public var extensions:Array<String> = ["*.nes"];
+
 	// hardware components
 	public var rom:ROM;
 	public var ram:RAM;
@@ -36,13 +38,13 @@ class NES implements IEmulator implements IState
 		ram.init(mapper, ppu, apu, controllers);
 		mapper.init(cpu, ppu, rom, ram);
 		mapper.onLoad();
-		cpu.init(ppu);
 		apu.init(cpu, ram);
+		cpu.init(this, ppu);
 	}
 
 	public function reset():Void
 	{
-		cpu.reset();
+		cpu.reset(this);
 	}
 
 	public function frame()
