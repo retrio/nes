@@ -83,8 +83,7 @@ class CPU implements IState
 		while (!ppu.finished)
 		{
 			runCycle();
-			if (ppu.needCatchUp ||
-				(cycles + ppu.stolenCycles >= 27200 && ppu.scanline < 242 ) ||
+			if ((cycles + ppu.stolenCycles >= 27200 && ppu.scanline < 242 ) ||
 				(cycles + ppu.stolenCycles >= 31200))
 			{
 				// yield control to the the PPU to catch up to this clock; this
@@ -212,13 +211,29 @@ class CPU implements IState
 	#if cputrace
 					Sys.print(" = #$" + StringTools.hex(read(ad), 2));
 	#end
-					if (mode == AbsoluteX || mode == ZeroPageY)
-						read(ad);
+					// dummy read
+					switch (mode)
+					{
+						case AbsoluteX, ZeroPageY, IndirectY:
+							read((ad - 0x100) & 0xffff);
+						default: {}
+					}
+
 					write(ad, accumulator);
 
 				case LDA:					// load accumulator
 					mode = OpCode.getAddressingMode(byte);
 					ad = getAddress(mode);
+					if (mode == AbsoluteX && (ad & 0xff00 != ((ad-x) & 0xff00)))
+					{
+						// dummy read
+						read((ad - 0x100) & 0xffff);
+					}
+					else if (mode == IndirectY && (ad & 0xff00 != ((ad-y) & 0xff00)))
+					{
+						// dummy read
+						read((ad - 0x100) & 0xffff);
+					}
 					value = accumulator = getValue(mode, ad);
 
 				case STX:					// store x
@@ -324,7 +339,6 @@ class CPU implements IState
 					mode = OpCode.getAddressingMode(byte);
 					ad = getAddress(mode);
 					v = getValue(mode, ad);
-					//write(ad, v);
 					var new_cf = v & 0x80 != 0;
 					value = (v << 1) & 0xff;
 					value += cf ? 1 : 0;
@@ -762,7 +776,6 @@ class CPU implements IState
 #if cputrace
 				Sys.print(" = #$" + StringTools.hex(r, 2));
 #end
-				read(addr+1);
 				return r;
 		}
 	}

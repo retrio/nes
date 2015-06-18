@@ -4,7 +4,7 @@
 	<test rom="all_instrs.nes"/>
 	<test rom="cpu_timing_test.nes" hash="2ac1deee044da3e03850b0d07bba8f984c77b7df"/>
 	<test rom="cpu_interrupts.nes"/>
-	<test rom="cpu_dummy_reads.nes"/>
+	<test rom="cpu_dummy_reads.nes" hash="2bfa3db2648942ab18e11aa3b84a1985e7a0261c"/>
 	<test rom="instr_misc.nes"/>
 
 	<!-- branch timing -->
