@@ -27,6 +27,8 @@ class UnromMapper extends Mapper
 		}
 		else
 		{
+			ppu.needCatchUp = true;
+
 			bank = data & 0xf;
 			// remap switchable 1st PRG bank
 			@unroll for (i in 0 ... 16)

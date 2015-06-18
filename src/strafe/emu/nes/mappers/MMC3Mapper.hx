@@ -123,6 +123,8 @@ class MMC3Mapper extends Mapper
 
 	inline function setupChr()
 	{
+		ppu.needCatchUp = true;
+
 		if (chrConfig)
 		{
 			setPpuBank(1, 0, chrReg[2]);
@@ -147,6 +149,8 @@ class MMC3Mapper extends Mapper
 
 	inline function setBank6()
 	{
+		ppu.needCatchUp = true;
+
 		if (!prgConfig)
 		{
 			// map c000-dfff to last bank, 8000-9fff to selected bank
@@ -216,6 +220,8 @@ class MMC3Mapper extends Mapper
 
 	inline function setPpuBank(bankSize:Int, bankPos:Int, bankNum:Int)
 	{
+		ppu.needCatchUp = true;
+
 		for (i in 0 ... bankSize)
 		{
 			chrMap[i + bankPos] = (0x400 * ((bankNum) + i)) % rom.chrSize;

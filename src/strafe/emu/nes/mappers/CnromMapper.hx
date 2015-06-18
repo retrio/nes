@@ -14,6 +14,8 @@ class CnromMapper extends Mapper
 		}
 		else
 		{
+			ppu.needCatchUp = true;
+
 			@unroll for (i in 0 ... 8)
 			{
 				chrMap[i] = (1024 * (i + 8 * (data & 0xff))) & (rom.chrSize - 1);

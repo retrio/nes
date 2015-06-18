@@ -4,6 +4,7 @@ import haxe.ds.Vector;
 import strafe.ByteString;
 
 
+@:build(strafe.macro.Optimizer.build())
 class PPU implements IState
 {
 	static inline var OPEN_BUS_DECAY_CYCLES = 1000000;
@@ -16,7 +17,15 @@ class PPU implements IState
 
 	public var mapper:Mapper;
 	public var cpu:CPU;
-	public var frameCount:Int = 0;
+	public var frameCount:Int = 1;
+	public var stolenCycles:Int = 0;
+	public var finished:Bool = false;
+	public var needCatchUp(default, set):Bool = false;
+	inline function set_needCatchUp(b:Bool)
+	{
+		if (b) catchUp();
+		return needCatchUp = false;
+	}
 
 	public static inline var RESOLUTION_X=256;
 	public static inline var RESOLUTION_Y=240;
@@ -27,12 +36,11 @@ class PPU implements IState
 	public var t2:ByteString = new ByteString(0x400);
 	public var t3:ByteString = new ByteString(0x400);
 	public var statusReg:Int=0;
-
-	public var cycles:Int = 0;
-
 	public var pal:ByteString = new ByteString(32);
-
 	public var bitmap:ByteString = new ByteString(240 * 256);
+
+	public var scanline:Int = 0;
+	public var cycles:Int = 1;
 
 	var vramAddr:Int = 0;
 	var vramAddrTemp:Int = 0;
@@ -48,7 +56,6 @@ class PPU implements IState
 	var bgShiftRegL:Int = 0;
 	var bgAttrShiftRegH:Int = 0;
 	var bgAttrShiftRegL:Int = 0;
-	var scanline:Int = 0;
 	// $2000 PPUCTRL registers
 	var nmiEnabled:Bool = false;
 	var ntAddr:Int = 0;
@@ -89,6 +96,7 @@ class PPU implements IState
 	var found:Int = 0;
 	var sprite0here:Bool = false;
 	var suppress:Bool = false;
+	var sprite0coming:Null<Int> = null;
 
 	var enabled(get, never):Bool;
 	inline function get_enabled()
@@ -116,6 +124,7 @@ class PPU implements IState
 
 	public function read(addr:Int):Int
 	{
+		catchUp();
 		var result:Int = 0;
 
 		switch(addr)
@@ -125,7 +134,7 @@ class PPU implements IState
 				{
 					if (cycles < 4)
 					{
-						if (cycles == 1)
+						if (cycles == 0)
 						{
 							vblank = false;
 						}
@@ -183,6 +192,7 @@ class PPU implements IState
 
 	public function write(addr:Int, data:Int)
 	{
+		catchUp();
 		openBus = data;
 		openBusDecayH = openBusDecayL = OPEN_BUS_DECAY_CYCLES;
 
@@ -280,7 +290,7 @@ class PPU implements IState
 		}
 	}
 
-	public inline function runFrame()
+	/*public inline function runFrame()
 	{
 		++frameCount;
 		scanline = 0;
@@ -307,11 +317,53 @@ class PPU implements IState
 				++scanline;
 			}
 		}
+	}*/
+
+	inline function incPixel()
+	{
+		if (++cycles > 340)
+		{
+			cycles = 0;
+			mapper.onScanline(scanline);
+			if (++scanline > 261)
+			{
+				scanline = 0;
+				++frameCount;
+				if (bgRender && (frameCount & 1 == 1))
+					++cycles;
+				finished = true;
+			}
+		}
+	}
+
+	public function catchUp()
+	{
+		//cpu.cycles += cpu.ticks;
+		//cpu.ticks = 0;
+		stolenCycles += cpu.cycles;
+
+		while (!finished && cpu.cycles > 0)
+		{
+			--cpu.cycles;
+			@unroll for (i in 0 ... 3)
+			{
+				clock();
+				incPixel();
+			}
+		}
+
+		stolenCycles -= cpu.cycles;
 	}
 
 	public inline function clock()
 	{
 		var enabled = enabled;
+
+		if (suppress)
+		{
+			cpu.suppressNmi();
+			suppress = false;
+		}
 
 		if (scanline < 240 || scanline == 261)
 		{
@@ -347,7 +399,7 @@ class PPU implements IState
 			}
 			if (scanline == 261)
 			{
-				if (cycles == 2)
+				if (cycles == 1)
 				{
 					// turn off vblank, sprite 0, sprite overflow flags
 					vblank = sprite0 = spriteOverflow = false;
@@ -391,7 +443,6 @@ class PPU implements IState
 			}
 		}
 
-		yieldToCPU();
 		signalNMI();
 
 		// open bus value decay
@@ -405,25 +456,9 @@ class PPU implements IState
 		}
 	}
 
-	inline function yieldToCPU()
-	{
-		if (suppress)
-		{
-			cpu.nmi = false;
-			cpu.suppressNmi();
-			suppress = false;
-		}
-
-		if ((div = (div + 1) % 3) == 0)
-		{
-			cpu.runCycle();
-			mapper.onCpuCycle();
-		}
-	}
-
 	inline function signalNMI()
 	{
-		cpu.nmi = (vblank && nmiEnabled);
+		cpu.nmi = vblank && nmiEnabled;
 	}
 
 	inline function incrementY()

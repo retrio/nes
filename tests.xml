@@ -9,8 +9,8 @@
 
 	<!-- branch timing -->
 	<test rom="1.Branch_Basics.nes" hash="8b98c90d1d94acfe0e47e5062f75b3865642542b"/>
-	<test rom="2.Backward_Branch.nes"/>
-	<test rom="3.Forward_Branch.nes"/>
+	<test rom="2.Backward_Branch.nes" hash="8b10ec39472c16714e5f2577fb492d2558e4cbbd"/>
+	<test rom="3.Forward_Branch.nes" hash="0d989b97876b13c29d8101c5538176041528be8e"/>
 
 	<!-- PPU tests -->
 	<test rom="palette_ram.nes" hash="cb15f68f631c1d409beefb775bcff990286096fb"/>

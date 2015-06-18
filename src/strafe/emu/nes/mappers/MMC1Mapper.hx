@@ -46,11 +46,7 @@ class MMC1Mapper extends Mapper
 			}
 
 			mmc1shift += (data & 1) << mmc1latch++;
-			if (mmc1latch < 5)
-			{
-				return; // no need to do anything
-			}
-			else
+			if (mmc1latch >= 5)
 			{
 				if (addr >= 0x8000 && addr < 0xa000)
 				{
@@ -108,6 +104,8 @@ class MMC1Mapper extends Mapper
 
 	inline function setBanks()
 	{
+		ppu.needCatchUp = true;
+
 		// chr bank 0
 		if (Util.getbit(mmc1ctrl, 4))
 		{

@@ -27,6 +27,8 @@ class AoromMapper extends Mapper
 		}
 		else
 		{
+			ppu.needCatchUp = true;
+
 			//remap all 32k of PRG to 32 x bank #
 			@unroll for (i in 0 ... 32)
 			{

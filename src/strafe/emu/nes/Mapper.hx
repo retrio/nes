@@ -128,7 +128,7 @@ class Mapper implements IState
 	}
 
 	var _readResult:Int;
-	public inline function ppuRead(addr:Int)
+	public function ppuRead(addr:Int)
 	{
 		if (addr < 0x2000)
 		{
@@ -166,7 +166,7 @@ class Mapper implements IState
 		return _readResult;
 	}
 
-	public inline function ppuWrite(addr:Int, data:Int)
+	public function ppuWrite(addr:Int, data:Int)
 	{
 		if (addr < 0x2000)
 		{

@@ -6,6 +6,7 @@ class CPU implements IState
 	public var ram:Memory;
 	public var ppu:PPU;
 	public var cycles:Int = 0;
+	public var ticks:Int = 0;
 	public var cycleCount:Int = 0;
 	public var nmi:Bool = false;
 	public var pc:Int = 0x8000;	// program counter
@@ -31,8 +32,6 @@ class CPU implements IState
 
 	var interruptDelay:Bool = false;
 	var prevIntFlag:Bool = false;
-
-	var ticks:Int = 0;
 
 	public function new(ram:Memory)
 	{
@@ -72,25 +71,44 @@ class CPU implements IState
 		id = true;
 	}
 
-	public function suppressNmi()
+	public inline function suppressNmi()
 	{
 		nmiQueued = false;
 		if (nmi) prevNmi = true;
 	}
 
+	public function runFrame()
+	{
+		ppu.stolenCycles = 0;
+		while (!ppu.finished)
+		{
+			runCycle();
+			if (ppu.needCatchUp ||
+				(cycles + ppu.stolenCycles >= 27200 && ppu.scanline < 242 ) ||
+				(cycles + ppu.stolenCycles >= 31200))
+			{
+				// yield control to the the PPU to catch up to this clock; this
+				// happens when the PPU has been modified or at end of frame
+				ppu.catchUp();
+			}
+		}
+		ppu.finished = false;
+	}
+
 	/**
 	 * Run a single instruction.
 	 */
-	public function runCycle()
+	public inline function runCycle()
 	{
-		read(0x4000);
+		//read(0x4000);
 		if (ram.dmaCounter > 0 && --ram.dmaCounter == 0)
 		{
 			// account for CPU cycles from DMA
 			cycles += 513;
+			ppu.catchUp();
 		}
 
-		if (cycles-- > 0) return;
+		var nmiFrame:Bool = false;
 
 		var ad:Int, v:Int;
 		var mode:AddressingMode;
@@ -99,6 +117,7 @@ class CPU implements IState
 		{
 			doNmi();
 			nmiQueued = false;
+			nmiFrame = true;
 		}
 		if (nmi && !prevNmi)
 		{
@@ -106,13 +125,13 @@ class CPU implements IState
 		}
 		prevNmi = nmi;
 
-		if (interrupt > 0)
+		if (nmiFrame) {}
+		else if (interrupt > 0)
 		{
 			if (!id && !interruptDelay)
 			{
 				doInterrupt();
 				cycles += 7;
-				return;
 			}
 			else if (interruptDelay)
 			{
@@ -121,474 +140,474 @@ class CPU implements IState
 				{
 					doInterrupt();
 					cycles += 7;
-					return;
 				}
 			}
 		}
-
-		var byte:Int = read(pc);
-		var code:OpCode = OpCode.getCode(byte);
-
-		var value:Null<Int> = null;
-
-#if cputrace
-		Sys.print("f" + StringTools.rpad(Std.string(ppu.frameCount), " ", 7));
-		Sys.print("c" + StringTools.rpad(Std.string(cycleCount), " ", 12));
-		Sys.print("A:" + StringTools.hex(accumulator, 2));
-		Sys.print(" X:" + StringTools.hex(x, 2));
-		Sys.print(" Y:" + StringTools.hex(y, 2));
-		Sys.print(" S:" + StringTools.hex(sp, 2));
-		Sys.print(" P:"
-			+ (nf ? "N" : "n")
-			+ (of ? "V" : "v")
-			+ (uf ? "U" : "u")
-			+ (bc ? "B" : "b")
-			+ (dm ? "D" : "d")
-			+ (id ? "I" : "i")
-			+ (zf ? "Z" : "z")
-			+ (cf ? "C" : "c")
-		);
-		Sys.print("   $" + StringTools.hex(pc, 4) + ":" + StringTools.hex(byte, 2));
-		Sys.print("        " + OpCode.opCodeNames[Std.int(code)] + " ");
-#end
-		++pc;
-		pc &= 0xffff;
-
-		// get base number of CPU cycles for this operation
-		// (in some circumstances, this may increase during execution)
-		ticks = OpCode.getTicks(byte);
-
-		// execute instruction
-		switch (code)
+		else
 		{
-			case ORA:					// logical or
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				value = getValue(mode, ad);
-				accumulator |= value;
-				value = accumulator;
+			var byte:Int = read(pc);
+			var code:OpCode = OpCode.getCode(byte);
 
-			case AND:					// logical and
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				accumulator &= v;
-				value = accumulator;
+			var value:Null<Int> = null;
 
-			case EOR:					// exclusive or
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				value = getValue(mode, ad);
-				accumulator = value ^ accumulator;
-				value = accumulator;
-
-			case ADC:					// add with carry
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				value = adc(v);
-
-			case STA:					// store accumulator
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
 #if cputrace
-				Sys.print(" = #$" + StringTools.hex(read(ad), 2));
+			Sys.print("f" + StringTools.rpad(Std.string(ppu.frameCount), " ", 7));
+			Sys.print("c" + StringTools.rpad(Std.string(cycleCount), " ", 12));
+			Sys.print("A:" + StringTools.hex(accumulator, 2));
+			Sys.print(" X:" + StringTools.hex(x, 2));
+			Sys.print(" Y:" + StringTools.hex(y, 2));
+			Sys.print(" S:" + StringTools.hex(sp, 2));
+			Sys.print(" P:"
+				+ (nf ? "N" : "n")
+				+ (of ? "V" : "v")
+				+ (uf ? "U" : "u")
+				+ (bc ? "B" : "b")
+				+ (dm ? "D" : "d")
+				+ (id ? "I" : "i")
+				+ (zf ? "Z" : "z")
+				+ (cf ? "C" : "c")
+			);
+			Sys.print("   $" + StringTools.hex(pc, 4) + ":" + StringTools.hex(byte, 2));
+			Sys.print("        " + OpCode.opCodeNames[Std.int(code)] + " ");
 #end
-				if (mode == AbsoluteX || mode == ZeroPageY)
-					read(ad);
-				write(ad, accumulator);
+			pc = (pc + 1) & 0xffff;
 
-			case LDA:					// load accumulator
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				value = accumulator = getValue(mode, ad);
+			// get base number of CPU cycles for this operation
+			// (in some circumstances, this may increase during execution)
+			ticks = OpCode.getTicks(byte);
 
-			case STX:					// store x
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				write(ad, x);
-#if cputrace
-				Sys.print(" = #$" + StringTools.hex(x, 2));
-#end
+			// execute instruction
+			switch (code)
+			{
+				case ORA:					// logical or
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					value = getValue(mode, ad);
+					accumulator |= value;
+					value = accumulator;
 
-			case STY:					// store y
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				write(ad, y);
-#if cputrace
-				Sys.print(" = #$" + StringTools.hex(y, 2));
-#end
+				case AND:					// logical and
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					accumulator &= v;
+					value = accumulator;
 
-			case SEI, CLI:				// set/clear interrupt disable
-				delayInterrupt();
-				id = code == OpCode.SEI;
+				case EOR:					// exclusive or
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					value = getValue(mode, ad);
+					accumulator = value ^ accumulator;
+					value = accumulator;
 
-			case SED, CLD:				// set/clear decimal mode
-				dm = code == OpCode.SED;
+				case ADC:					// add with carry
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					value = adc(v);
 
-			case SEC, CLC:				// set/clear carry
-				cf = code == OpCode.SEC;
+				case STA:					// store accumulator
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+	#if cputrace
+					Sys.print(" = #$" + StringTools.hex(read(ad), 2));
+	#end
+					if (mode == AbsoluteX || mode == ZeroPageY)
+						read(ad);
+					write(ad, accumulator);
 
-			case CLV:					// clear overflow
-				of = false;
+				case LDA:					// load accumulator
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					value = accumulator = getValue(mode, ad);
 
-			case BIT:					// bit test
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				zf = v & accumulator == 0;
-				of = v & 0x40 != 0;
-				nf = v & 0x80 != 0;
+				case STX:					// store x
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					write(ad, x);
+	#if cputrace
+					Sys.print(" = #$" + StringTools.hex(x, 2));
+	#end
 
-			case CMP,
-				CPX,
-				CPY:					// compare [x/y]
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
+				case STY:					// store y
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					write(ad, y);
+	#if cputrace
+					Sys.print(" = #$" + StringTools.hex(y, 2));
+	#end
 
-				var compare_to = switch (code)
-				{
-					case CMP: accumulator;
-					case CPX: x;
-					default: y;
-				}
+				case SEI, CLI:				// set/clear interrupt disable
+					delayInterrupt();
+					id = code == OpCode.SEI;
 
-				var tmp = compare_to - v;
-				if (tmp < 0)
-					tmp += 0xff + 1;
+				case SED, CLD:				// set/clear decimal mode
+					dm = code == OpCode.SED;
 
-				cf = compare_to >= v;
-				zf = compare_to == v;
-				nf = tmp & 0x80 == 0x80;
+				case SEC, CLC:				// set/clear carry
+					cf = code == OpCode.SEC;
 
-			case SBC:					// subtract with carry
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				value = sbc(v);
+				case CLV:					// clear overflow
+					of = false;
 
-			case JSR:					// jump to subroutine
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				pushStack(pc - 1 >> 8);
-				pushStack((pc - 1) & 0xff);
-				pc = ad;
+				case BIT:					// bit test
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					zf = v & accumulator == 0;
+					of = v & 0x40 != 0;
+					nf = v & 0x80 != 0;
 
-			case RTS:					// return from subroutine
-				read(pc++);
-				pc = (popStack() | (popStack() << 8)) + 1;
+				case CMP,
+					CPX,
+					CPY:					// compare [x/y]
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
 
-			case RTI:					// return from interrupt
-				read(pc++);
-				popStatus();
-				pc = popStack() | (popStack() << 8);
+					var compare_to = switch (code)
+					{
+						case CMP: accumulator;
+						case CPX: x;
+						default: y;
+					}
 
-			case ASL:					// arithmetic shift left
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				//write(ad, v);
-				cf = v & 0x80 != 0;
-				value = (v << 1) & 0xff;
-				storeValue(mode, ad, value);
+					var tmp = compare_to - v;
+					if (tmp < 0)
+						tmp += 0xff + 1;
 
-			case LSR:					// logical shift right
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				//write(ad, v);
-				cf = v & 1 != 0;
-				value = v >> 1;
-				storeValue(mode, ad, value);
+					cf = compare_to >= v;
+					zf = compare_to == v;
+					nf = tmp & 0x80 == 0x80;
 
-			case ROL:					// rotate left
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				//write(ad, v);
-				var new_cf = v & 0x80 != 0;
-				value = (v << 1) & 0xff;
-				value += cf ? 1 : 0;
-				cf = new_cf;
-				storeValue(mode, ad, value);
+				case SBC:					// subtract with carry
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					value = sbc(v);
 
-			case ROR:					// rotate right
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				//write(ad, v);
-				var new_cf = v & 1 != 0;
-				value = (v >> 1) & 0xff;
-				value += cf ? 0x80 : 0;
-				cf = new_cf;
-				storeValue(mode, ad, value);
-
-			case BCC,
-					BCS,
-					BEQ,
-					BMI,
-					BNE,
-					BPL,
-					BVC,
-					BVS:					// branch
-				var toCheck = switch(code)
-				{
-					case BCC, BCS:
-						cf;
-					case BEQ, BNE:
-						zf;
-					case BMI, BPL:
-						nf;
-					case BVC, BVS:
-						of;
-					default: false;
-				}
-
-				var checkAgainst = switch(code)
-				{
-					case BCS, BEQ, BMI, BVS:
-						true;
-					default:
-						false;
-				}
-
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				if (toCheck == checkAgainst)
-				{
-					ticks += 1;
+				case JSR:					// jump to subroutine
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					pushStack(pc - 1 >> 8);
+					pushStack((pc - 1) & 0xff);
 					pc = ad;
-				}
-				else
-				{
-					ticks = 2;
-				}
 
-			case JMP:					// jump
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				pc = ad;
+				case RTS:					// return from subroutine
+					read(pc++);
+					pc = (popStack() | (popStack() << 8)) + 1;
 
-			case LDX:					// load x
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				x = getValue(mode, ad);
-				zf = x == 0;
-				nf = x & 0x80 == 0x80;
+				case RTI:					// return from interrupt
+					read(pc++);
+					popStatus();
+					pc = popStack() | (popStack() << 8);
 
-			case LDY:					// load y
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				y = getValue(mode, ad);
-				zf = y == 0;
-				nf = y & 0x80 == 0x80;
+				case ASL:					// arithmetic shift left
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					//write(ad, v);
+					cf = v & 0x80 != 0;
+					value = (v << 1) & 0xff;
+					storeValue(mode, ad, value);
 
-			case PHA:					// push accumulator
-				pushStack(accumulator);
+				case LSR:					// logical shift right
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					//write(ad, v);
+					cf = v & 1 != 0;
+					value = v >> 1;
+					storeValue(mode, ad, value);
 
-			case PHP:					// push cpu status
-				pushStatus();
+				case ROL:					// rotate left
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					//write(ad, v);
+					var new_cf = v & 0x80 != 0;
+					value = (v << 1) & 0xff;
+					value += cf ? 1 : 0;
+					cf = new_cf;
+					storeValue(mode, ad, value);
 
-			case PLP:					// pull cpu status
-				delayInterrupt();
-				popStatus();
+				case ROR:					// rotate right
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					//write(ad, v);
+					var new_cf = v & 1 != 0;
+					value = (v >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					cf = new_cf;
+					storeValue(mode, ad, value);
 
-			case PLA:					// pull accumulator
-				accumulator = value = popStack();
+				case BCC,
+						BCS,
+						BEQ,
+						BMI,
+						BNE,
+						BPL,
+						BVC,
+						BVS:					// branch
+					var toCheck = switch(code)
+					{
+						case BCC, BCS:
+							cf;
+						case BEQ, BNE:
+							zf;
+						case BMI, BPL:
+							nf;
+						case BVC, BVS:
+							of;
+						default: false;
+					}
 
-			case INC:					// increment memory
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				value = read(ad);
-				//write(ad, value);
-				value = (value + 1) & 0xff;
-				write(ad, value);
+					var checkAgainst = switch(code)
+					{
+						case BCS, BEQ, BMI, BVS:
+							true;
+						default:
+							false;
+					}
 
-			case INX:					// increment x
-				x += 1;
-				x &= 0xff;
-				value = x;
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					if (toCheck == checkAgainst)
+					{
+						ticks += 1;
+						pc = ad;
+					}
+					else
+					{
+						ticks = 2;
+					}
 
-			case INY:					// increment x
-				y += 1;
-				y &= 0xff;
-				value = y;
+				case JMP:					// jump
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					pc = ad;
 
-			case DEC:					// decrement memory
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				value = read(ad);
-				//write(ad, value);
-				value = (value - 1) & 0xff;
-				write(ad, value);
+				case LDX:					// load x
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					x = getValue(mode, ad);
+					zf = x == 0;
+					nf = x & 0x80 == 0x80;
 
-			case DEX:					// decrement x
-				x = (x-1) & 0xff;
-				value = x;
+				case LDY:					// load y
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					y = getValue(mode, ad);
+					zf = y == 0;
+					nf = y & 0x80 == 0x80;
 
-			case DEY:					// decrement y
-				y = (y-1) & 0xff;
-				value = y;
+				case PHA:					// push accumulator
+					pushStack(accumulator);
 
-			case TAX:					// transfer accumulator to x
-				x = value = accumulator;
+				case PHP:					// push cpu status
+					pushStatus();
 
-			case TAY:					// transfer accumulator to y
-				y = value = accumulator;
+				case PLP:					// pull cpu status
+					delayInterrupt();
+					popStatus();
 
-			case TSX:					// transfer stack pointer to x
-				x = value = sp;
+				case PLA:					// pull accumulator
+					accumulator = value = popStack();
 
-			case TSY:					// transfer stack pointer to y
-				y = value = sp;
+				case INC:					// increment memory
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					value = read(ad);
+					//write(ad, value);
+					value = (value + 1) & 0xff;
+					write(ad, value);
 
-			case TYA:					// transfer y to accumulator
-				accumulator = value = y;
+				case INX:					// increment x
+					x += 1;
+					x &= 0xff;
+					value = x;
 
-			case TXS:					// transfer x to stack pointer
-				sp = x;
+				case INY:					// increment x
+					y += 1;
+					y &= 0xff;
+					value = y;
 
-			case TXA:					// transfer x to accumulator
-				accumulator = value = x;
+				case DEC:					// decrement memory
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					value = read(ad);
+					//write(ad, value);
+					value = (value - 1) & 0xff;
+					write(ad, value);
 
-			case NOP: {}					// no operation
+				case DEX:					// decrement x
+					x = (x-1) & 0xff;
+					value = x;
 
-			case IGN1:
-				pc += 1;
+				case DEY:					// decrement y
+					y = (y-1) & 0xff;
+					value = y;
 
-			case IGN2:
-				pc += 2;
+				case TAX:					// transfer accumulator to x
+					x = value = accumulator;
 
-			case LAX:					// LDX + TXA
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				x = getValue(mode, ad);
-				accumulator = value = x;
+				case TAY:					// transfer accumulator to y
+					y = value = accumulator;
 
-			case SAX:					// store (x & accumulator)
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				write(ad, x & accumulator);
+				case TSX:					// transfer stack pointer to x
+					x = value = sp;
 
-			case RLA:					// ROL then AND
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				value = (v << 1) & 0xff;
-				value += cf ? 1 : 0;
+				case TSY:					// transfer stack pointer to y
+					y = value = sp;
 
-				write(ad, value);
-				cf = v & 0x80 != 0;
+				case TYA:					// transfer y to accumulator
+					accumulator = value = y;
 
-				accumulator &= value;
-				value = accumulator;
+				case TXS:					// transfer x to stack pointer
+					sp = x;
 
-			case RRA:					// ROR then ADC
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				value = (v >> 1) & 0xff;
-				value += cf ? 0x80 : 0;
+				case TXA:					// transfer x to accumulator
+					accumulator = value = x;
 
-				write(ad, value);
-				cf = v & 1 != 0;
+				case NOP: {}					// no operation
 
-				value = accumulator = adc(value);
+				case IGN1:
+					pc += 1;
 
-			case SLO:					// ASL then ORA
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				cf = v & 0x80 != 0;
-				v = (v << 1) & 0xff;
-				write(ad, v);
-				accumulator |= v;
-				value = accumulator;
+				case IGN2:
+					pc += 2;
 
-			case SRE:					// LSR then EOR
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad);
-				cf = v & 1 != 0;
-				value = v >> 1;
-				write(ad, value);
-				accumulator = value ^ accumulator;
-				value = accumulator;
+				case LAX:					// LDX + TXA
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					x = getValue(mode, ad);
+					accumulator = value = x;
 
-			case DCP:					// DEC then CMP
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				v = getValue(mode, ad) - 1;
-				v &= 0xff;
-				write(ad, v);
+				case SAX:					// store (x & accumulator)
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					write(ad, x & accumulator);
 
-				var tmp = accumulator - v;
-				if (tmp < 0) tmp += 0xff + 1;
+				case RLA:					// ROL then AND
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					value = (v << 1) & 0xff;
+					value += cf ? 1 : 0;
 
-				cf = accumulator >= v;
-				zf = accumulator == v;
-				nf = tmp & 0x80 == 0x80;
+					write(ad, value);
+					cf = v & 0x80 != 0;
 
-			case ISC:					// INC then SBC
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				value = (read(ad) + 1) & 0xff;
-				write(ad, value);
-				value = sbc(value);
+					accumulator &= value;
+					value = accumulator;
 
-			case BRK:					// break
-				read(pc++);
-				breakInterrupt();
+				case RRA:					// ROR then ADC
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					value = (v >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
 
-			case ALR:
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				accumulator &= read(ad);
-				cf = accumulator & 1 != 0;
-				accumulator >>= 1;
-				accumulator &= 0x7f;
-				value = accumulator;
+					write(ad, value);
+					cf = v & 1 != 0;
 
-			case ANC:
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				accumulator &= read(ad);
-				cf = nf = accumulator & 0x80 == 0x80;
-				zf = accumulator == 0;
+					value = accumulator = adc(value);
 
-			case ARR:
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				accumulator = (((read(ad) & accumulator) >> 1)	 | (cf ? 0x80 : 0x00));
-				zf = accumulator == 0;
-				nf = accumulator & 0x80 == 0x80;
-				cf = accumulator & 0x40 == 0x40;
-				of = accumulator & 0x20 == 0x20 != cf;
+				case SLO:					// ASL then ORA
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					cf = v & 0x80 != 0;
+					v = (v << 1) & 0xff;
+					write(ad, v);
+					accumulator |= v;
+					value = accumulator;
 
-			case AXS:
-				mode = OpCode.getAddressingMode(byte);
-				ad = getAddress(mode);
-				value = x = (accumulator & x) - ram.read(ad);
-				cf = (x >= 0);
+				case SRE:					// LSR then EOR
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad);
+					cf = v & 1 != 0;
+					value = v >> 1;
+					write(ad, value);
+					accumulator = value ^ accumulator;
+					value = accumulator;
 
-			default:
-				throw "Instruction $" + StringTools.hex(byte,2) + " not implemented";
-		}
+				case DCP:					// DEC then CMP
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					v = getValue(mode, ad) - 1;
+					v &= 0xff;
+					write(ad, v);
 
-		if (value != null)
-		{
-			zf = value == 0;
-			nf = value & 0x80 == 0x80;
-		}
+					var tmp = accumulator - v;
+					if (tmp < 0) tmp += 0xff + 1;
+
+					cf = accumulator >= v;
+					zf = accumulator == v;
+					nf = tmp & 0x80 == 0x80;
+
+				case ISC:					// INC then SBC
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					value = (read(ad) + 1) & 0xff;
+					write(ad, value);
+					value = sbc(value);
+
+				case BRK:					// break
+					read(pc++);
+					breakInterrupt();
+
+				case ALR:
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					accumulator &= read(ad);
+					cf = accumulator & 1 != 0;
+					accumulator >>= 1;
+					accumulator &= 0x7f;
+					value = accumulator;
+
+				case ANC:
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					accumulator &= read(ad);
+					cf = nf = accumulator & 0x80 == 0x80;
+					zf = accumulator == 0;
+
+				case ARR:
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					accumulator = (((read(ad) & accumulator) >> 1)	 | (cf ? 0x80 : 0x00));
+					zf = accumulator == 0;
+					nf = accumulator & 0x80 == 0x80;
+					cf = accumulator & 0x40 == 0x40;
+					of = accumulator & 0x20 == 0x20 != cf;
+
+				case AXS:
+					mode = OpCode.getAddressingMode(byte);
+					ad = getAddress(mode);
+					value = x = (accumulator & x) - ram.read(ad);
+					cf = (x >= 0);
+
+				default:
+					throw "Instruction $" + StringTools.hex(byte,2) + " not implemented";
+			}
+
+			if (value != null)
+			{
+				zf = value == 0;
+				nf = value & 0x80 == 0x80;
+			}
 
 #if cputrace
-		Sys.print("\n");
+			Sys.print("\n");
 #end
 
-		cycles += ticks;
-		cycleCount += ticks;
-		pc &= 0xffff;
+			cycles += ticks;
+			cycleCount += ticks;
+			pc &= 0xffff;
+		}
 	}
 
 	inline function getAddress(mode:AddressingMode):Int
@@ -627,7 +646,7 @@ class CPU implements IState
 #end
 				//address = (read(pc++) & 0xff) + pc;
 				// new page
-				if ((address & 0xff00) != (pc & 0xff00)) ticks += 2;
+				if ((address & 0xff00) != (pc & 0xff00)) ticks += 1;
 
 			case Indirect:
 				address = read(pc++) | (read(pc++) << 8);

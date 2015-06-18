@@ -48,14 +48,14 @@ class Memory
 			var port = addr - 0x4016;
 			return controllers[port] == null ? 0 : controllers[port].pop();
 		}
-		else if (addr >= 0x4000 && addr <= 4018)
+		else if (addr >= 0x4000 && addr <= 0x4018)
 		{
 			// APU registers
 			return apu.read(addr - 0x4000);
 		}
 		else
 		{
-			return addr >> 8;
+			throw "Bad address: " + StringTools.hex(addr);
 		}
 	}
 

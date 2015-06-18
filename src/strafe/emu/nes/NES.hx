@@ -49,7 +49,7 @@ class NES implements IEmulator implements IState
 
 	public function frame()
 	{
-		ppu.runFrame();
+		cpu.runFrame();
 	}
 
 	public function addController(controller:IController, ?port:Int=null):Null<Int>
