@@ -15,7 +15,7 @@ class NES implements IEmulator implements IState
 
 	// hardware components
 	public var rom:ROM;
-	public var ram:RAM;
+	public var ram:Memory;
 	public var cpu:CPU;
 	public var ppu:PPU;
 	public var apu:APU;
@@ -26,7 +26,7 @@ class NES implements IEmulator implements IState
 
 	public function loadGame(gameData:FileWrapper)
 	{
-		ram = new RAM();
+		ram = new Memory();
 
 		rom = new ROM(gameData, ram);
 		mapper = rom.mapper;

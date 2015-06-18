@@ -3,3 +3,4 @@ bin
 test
 test_results
 *.log
+.DS_Store

@@ -3,7 +3,7 @@ package strafe.emu.nes;
 
 class CPU implements IState
 {
-	public var ram:RAM;
+	public var ram:Memory;
 	public var ppu:PPU;
 	public var cycles:Int = 0;
 	public var cycleCount:Int = 0;
@@ -34,7 +34,7 @@ class CPU implements IState
 
 	var ticks:Int = 0;
 
-	public function new(ram:RAM)
+	public function new(ram:Memory)
 	{
 		this.ram = ram;
 	}
@@ -560,7 +560,7 @@ class CPU implements IState
 			case ARR:
 				mode = OpCode.getAddressingMode(byte);
 				ad = getAddress(mode);
-				accumulator = (((ram.read(ad) & accumulator) >> 1)	 | (cf ? 0x80 : 0x00));
+				accumulator = (((read(ad) & accumulator) >> 1)	 | (cf ? 0x80 : 0x00));
 				zf = accumulator == 0;
 				nf = accumulator & 0x80 == 0x80;
 				cf = accumulator & 0x40 == 0x40;

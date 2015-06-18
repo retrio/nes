@@ -6,7 +6,7 @@ import haxe.ds.Vector;
 class APU
 {
 	public var cpu:CPU;
-	public var ram:RAM;
+	public var ram:Memory;
 
 	public var cycles:Int = 0;
 
@@ -22,7 +22,7 @@ class APU
 
 	public function new() {}
 
-	public function init(cpu:CPU, ram:RAM)
+	public function init(cpu:CPU, ram:Memory)
 	{
 		this.cpu = cpu;
 		this.ram = ram;

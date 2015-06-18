@@ -4,7 +4,7 @@ import haxe.ds.Vector;
 import strafe.ByteString;
 
 
-class RAM
+class Memory
 {
 	public var _ram:ByteString = new ByteString(0x800);
 	public var mapper:Mapper;

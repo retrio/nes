@@ -14,15 +14,15 @@
 	<window orientation="landscape" vsync="true"/>
 	<window resizable="true"/>
 
+	<haxeflag name="-swf-version" value="11.3" if="flash"/>
+
 	<source path="src"/>
 
 	<haxelib name="format"/>
 	<haxelib name="systools" if="native"/>
 	<haxelib name="openfl"/>
-	<haxelib name="strafe-core"/>
+	<haxelib name="strafe-core" path="../"/>
 
 	<haxedef name="HXCPP_STACK_TRACE" if="profile"/>
 	<haxedef name="HXCPP_STACK_LINE" if="profile"/>
-
-	<assets path="assets/graphics" rename="graphics" include="*.png" type="image" embed="true"/>
 </project>

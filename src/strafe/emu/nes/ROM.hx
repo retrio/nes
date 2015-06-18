@@ -25,7 +25,7 @@ class ROM implements IState
 
 	var mapperNumber:Int=0;
 
-	public function new(file:FileWrapper, ram:RAM)
+	public function new(file:FileWrapper, ram:Memory)
 	{
 		var pos = 0;
 
