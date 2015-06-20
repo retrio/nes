@@ -5,19 +5,18 @@ package strafe.emu.nes;
 @:enum
 abstract AddressingMode(Int) from Int to Int
 {
-	static inline var pos:Int = 0x8;
-	var Accumulator = 0x01<<pos;
-	var Immediate = 0x02<<pos;
-	var ZeroPage = 0x03<<pos;
-	var ZeroPageX = 0x04<<pos;
-	var ZeroPageY = 0x05<<pos;
-	var Relative = 0x06<<pos;
-	var Absolute = 0x07<<pos;
-	var AbsoluteX = 0x08<<pos;
-	var AbsoluteY = 0x09<<pos;
-	var Indirect = 0x10<<pos;
-	var IndirectX = 0x11<<pos;
-	var IndirectY = 0x12<<pos;
+	var Accumulator = 1;
+	var Immediate = 2;
+	var ZeroPage = 3;
+	var ZeroPageX = 4;
+	var ZeroPageY = 5;
+	var Relative = 6;
+	var Absolute = 7;
+	var AbsoluteX = 8;
+	var AbsoluteY = 9;
+	var Indirect = 10;
+	var IndirectX = 11;
+	var IndirectY = 12;
 
 	public static var addressingModeNames = [
 		Accumulator => "Accumulator",

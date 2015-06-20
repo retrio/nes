@@ -122,7 +122,7 @@ class PPU implements IState
 		for (i in 0 ... pal.length) pal.set(i, defaultPalette[i]);
 	}
 
-	public function read(addr:Int):Int
+	public inline function read(addr:Int):Int
 	{
 		catchUp();
 		var result:Int = 0;
@@ -190,7 +190,7 @@ class PPU implements IState
 		return openBus;
 	}
 
-	public function write(addr:Int, data:Int)
+	public inline function write(addr:Int, data:Int)
 	{
 		catchUp();
 		openBus = data;

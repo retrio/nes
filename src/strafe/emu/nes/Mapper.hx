@@ -106,7 +106,7 @@ class Mapper implements IState
 		}
 	}
 
-	public inline function read(addr:Int)
+	public function read(addr:Int)
 	{
 		if (addr >= 0x8000)
 		{

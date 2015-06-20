@@ -25,7 +25,7 @@ class Memory
 		this.controllers = controllers;
 	}
 
-	public inline function read(addr:Int):Int
+	public function read(addr:Int):Int
 	{
 		if (addr < 0x2000)
 		{
@@ -59,7 +59,7 @@ class Memory
 		}
 	}
 
-	public inline function write(addr:Int, data:Int)
+	public function write(addr:Int, data:Int)
 	{
 		if (addr < 0x2000)
 		{

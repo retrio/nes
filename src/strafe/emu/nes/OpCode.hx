@@ -127,8 +127,8 @@ abstract OpCode(Int) from Int to Int
 		INY => "INY",
 		JSR => "JSR",
 		NOP => "NOP",
-		IGN1 => "NOP(1)",
-		IGN2 => "NOP(2)",
+		IGN1 => "IGN1",
+		IGN2 => "IGN2",
 		PHA => "PHA",
 		PHP => "PHP",
 		PLA => "PLA",
@@ -154,7 +154,12 @@ abstract OpCode(Int) from Int to Int
 		DCP => "DCP",
 		ISC => "ISC",
 
-		UNKNOWN => "???",
+		ALR => "ALR",
+		ANC => "ANC",
+		ARR => "ARR",
+		AXS => "AXS",
+
+		UNKNOWN => "UNKNOWN",
 	];
 
 	static var _codes:Vector<OpCode> = new Vector(0x100);
