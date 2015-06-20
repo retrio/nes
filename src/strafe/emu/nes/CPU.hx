@@ -29,9 +29,7 @@ class CPU implements IState
 	var x:Int = 0;				// x register
 	var y:Int = 0;				// y register
 
-	var value:Int;
 	var address:Int;
-	var tmp:Int;
 
 #if vectorflags
 	var flags:Vector<Bool> = new Vector(8);
@@ -216,6 +214,8 @@ class CPU implements IState
 			// get base number of CPU cycles for this operation
 			// (in some circumstances, this may increase during execution)
 			ticks = OpCode.getTicks(byte);
+
+			var value:Int;
 
 			// execute instruction
 			@execute switch (code)
@@ -567,7 +567,7 @@ class CPU implements IState
 					value = getValue(mode) - 1;
 					write(address, value & 0xff);
 
-					tmp = accumulator - value;
+					var tmp = accumulator - value;
 					if (tmp < 0) tmp += 0xff + 1;
 
 					cf = accumulator >= value;
@@ -768,6 +768,7 @@ class CPU implements IState
 
 	inline function getValue(mode:AddressingMode):Int
 	{
+		var value:Int;
 		switch(mode)
 		{
 			case Immediate:
@@ -864,9 +865,9 @@ class CPU implements IState
 
 	inline function cmp(val:Int, mode:AddressingMode):Void
 	{
-		value = getValue(mode);
+		var value = getValue(mode);
 
-		tmp = val - value;
+		var tmp = val - value;
 		if (tmp < 0)
 			tmp += 0xff + 1;
 
@@ -877,7 +878,7 @@ class CPU implements IState
 
 	inline function adc(value:Int):Int
 	{
-		tmp = value + accumulator + (cf ? 1 : 0);
+		var tmp = value + accumulator + (cf ? 1 : 0);
 		cf = (tmp >> 8 != 0);
 		of = (((accumulator ^ value) & 0x80) == 0)
 				&& (((accumulator ^ tmp) & 0x80) != 0);
@@ -888,7 +889,7 @@ class CPU implements IState
 
 	inline function sbc(value:Int):Int
 	{
-		tmp = accumulator - value - (cf ? 0 : 1);
+		var tmp = accumulator - value - (cf ? 0 : 1);
 		cf = (tmp >> 8 == 0);
 		of = (((accumulator ^ value) & 0x80) != 0)
 				&& (((accumulator ^ tmp) & 0x80) != 0);
