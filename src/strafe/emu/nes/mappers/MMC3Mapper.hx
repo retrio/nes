@@ -171,32 +171,7 @@ class MMC3Mapper extends Mapper
 		}
 	}
 
-	function checkA12(addr:Int)
-	{
-		//run on every PPU cycle (wasteful...)
-		//clocks scanline counter every time A12 line goes from low to high
-		//on PPU address bus, _except_ when it has been less than 8 PPU cycles
-		//since the line last went low.
-		var a12 = Util.getbit(addr, 12);
-		if (a12 && (!lastA12))
-		{
-			//rising edge
-			if ((a12timer <= 0))
-			{
-				clockScanCounter();
-			}
-		}
-		else if (!a12 && lastA12)
-		{
-			//falling edge
-			a12timer = 8;
-		}
-
-		--a12timer;
-		lastA12 = a12;
-	}
-
-	inline function clockScanCounter()
+	override public function onScanline(scanline:Int)
 	{
 		if (irqReload || (irqCtr == 0))
 		{
@@ -215,7 +190,6 @@ class MMC3Mapper extends Mapper
 				interrupted = true;
 			}
 		}
-
 	}
 
 	inline function setPpuBank(bankSize:Int, bankPos:Int, bankNum:Int)
@@ -227,9 +201,4 @@ class MMC3Mapper extends Mapper
 			chrMap[i + bankPos] = (0x400 * ((bankNum) + i)) % rom.chrSize;
 		}
 	}
-
-	/*public function onScanline(scanline:Int)
-	{
-		checkA12();
-	}*/
 }

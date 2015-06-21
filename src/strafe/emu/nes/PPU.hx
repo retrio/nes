@@ -322,7 +322,10 @@ class PPU implements IState
 		if (++cycles > 340)
 		{
 			cycles = 0;
-			mapper.onScanline(scanline);
+			if (scanline < 241)
+			{
+				mapper.onScanline(scanline);
+			}
 			if (++scanline > 261)
 			{
 				scanline = 0;
@@ -553,9 +556,7 @@ class PPU implements IState
 	inline function fetchNTByte()
 	{
 		// fetch nt byte
-		tileAddr = (mapper.ppuRead(
-				((vramAddr & 0xc00) | 0x2000) + (vramAddr & 0x3ff)) << 4)
-				+ (bgPatternAddr);
+		tileAddr = (mapper.ppuRead(((vramAddr & 0xc00) | 0x2000) + (vramAddr & 0x3ff)) << 4) + bgPatternAddr;
 	}
 
 	inline function drawBGPixel(bufferOffset:Int):Bool

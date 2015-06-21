@@ -127,10 +127,11 @@ class CPU implements IState
 			runCycle();
 
 			if ((cycles + ppu.stolenCycles >= 27200 && ppu.scanline < 242 ) ||
-				(cycles + ppu.stolenCycles >= 31200))
+				(cycles + ppu.stolenCycles >= 31200) ||
+				ppu.cycles + (cycles * 3) > 340)
 			{
 				// yield control to the the PPU to catch up to this clock; this
-				// happens when the PPU has been modified or at end of frame
+				// happens when the PPU has been modified or at end of each scanline
 				ppu.catchUp();
 			}
 		}
@@ -166,26 +167,24 @@ class CPU implements IState
 		}
 		prevNmi = nmi;
 
-		if (nmiFrame) {}
-		else if (interrupt > 0)
+		if (interrupt > 0 && (!id && !interruptDelay))
 		{
-			if (!id && !interruptDelay)
+			doInterrupt();
+			cycles += 7;
+		}
+		else if (interrupt > 0 && interruptDelay)
+		{
+			interruptDelay = false;
+			if (!prevIntFlag)
 			{
 				doInterrupt();
 				cycles += 7;
 			}
-			else if (interruptDelay)
-			{
-				interruptDelay = false;
-				if (!prevIntFlag)
-				{
-					doInterrupt();
-					cycles += 7;
-				}
-			}
 		}
 		else
 		{
+			interruptDelay = false;
+
 			var byte:Int = read(pc);
 			var code:OpCode = OpCode.getCode(byte);
 
