@@ -4,8 +4,6 @@
 	<app main="Main" path="bin" file="strafe"/>
 	<app path="bin-profile" if="profile"/>
 	<app path="bin-cputrace" if="cputrace"/>
-	<haxeflag name="--no-inline" if="debug"/>
-	<haxeflag name="--no-inline" if="profile"/>
 	<!--haxeflag name="--no-inline" if="advanced-telemetry"/-->
 
 	<window fps="60" background="0x000000"/>
@@ -22,7 +20,4 @@
 	<haxelib name="systools" if="native"/>
 	<haxelib name="openfl"/>
 	<haxelib name="strafe-core" path="../"/>
-
-	<haxedef name="HXCPP_STACK_TRACE" if="profile"/>
-	<haxedef name="HXCPP_STACK_LINE" if="profile"/>
 </project>

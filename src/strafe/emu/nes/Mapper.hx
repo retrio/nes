@@ -127,9 +127,9 @@ class Mapper implements IState
 		}
 	}
 
-	var _readResult:Int;
 	public function ppuRead(addr:Int)
 	{
+		var _readResult:Int;
 		if (addr < 0x2000)
 		{
 			_readResult = rom.chr.get(chrMap[addr >> 10] + (addr & 1023)) & 0xff;

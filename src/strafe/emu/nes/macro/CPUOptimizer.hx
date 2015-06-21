@@ -44,8 +44,8 @@ class CPUOptimizer
 				{
 					switch (expr.expr)
 					{
-						//case EVars([{name: "code"}]):
-						//	expr.expr = EBlock([]);
+						case EVars([{name: "code"}]):
+							expr.expr = EBlock([]);
 
 						case EMeta({name:"execute"}, e):
 							expr.expr = optimizeExecute(e);

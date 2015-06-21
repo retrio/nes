@@ -47,7 +47,7 @@ class PPU implements IState
 	var xScroll:Int = 0;
 	var even = true;
 
-	var bgPatternAddr = 0;
+	var bgPatternAddr = 0x1000;
 	var sprPatternAddr = 0;
 
 	var oamAddr:Int = 0;
@@ -82,7 +82,6 @@ class PPU implements IState
 	var openBusDecayH:Int = 0;
 	var openBusDecayL:Int = 0;
 	var readBuffer:Int = 0;
-	var div:Int = 2;
 	var tileAddr:Int = 0;
 	var tileL:Int = 0;
 	var tileH:Int = 0;
@@ -166,15 +165,15 @@ class PPU implements IState
 				if ((vramAddr & 0x3fff) < 0x3f00)
 				{
 					openBus = readBuffer;
-					readBuffer = mapper.ppuRead(vramAddr);
+					readBuffer = mapper.ppuRead(vramAddr & 0x3fff);
 				}
 				else
 				{
-					readBuffer = mapper.ppuRead((vramAddr & 0x3fff) - 0x1000);
 					openBus = (openBus & 0xc0) | (mapper.ppuRead(vramAddr) & 0x3f);
+					readBuffer = mapper.ppuRead((vramAddr & 0x3fff) - 0x1000);
 				}
 				openBusDecayH = openBusDecayL = OPEN_BUS_DECAY_CYCLES;
-				if (!enabled || scanline > 240 && scanline < 261)
+				if (!enabled || (scanline > 240 && scanline < 261))
 				{
 					vramAddr += vramInc;
 				}
@@ -256,9 +255,8 @@ class PPU implements IState
 				if (even)
 				{
 					// high byte
-					vramAddrTemp &= 0xc0ff;
+					vramAddrTemp &= 0xff;
 					vramAddrTemp |= ((data & 0x3f) << 8);
-					vramAddrTemp &= 0x3fff;
 					even = false;
 				}
 				else
@@ -272,7 +270,7 @@ class PPU implements IState
 
 			case 7:
 				// PPUDATA: write to location specified by vramAddr
-				mapper.ppuWrite((vramAddr & 0x3fff), data);
+				mapper.ppuWrite(vramAddr & 0x3fff, data);
 				if (!enabled || (scanline > 240 && scanline < 261))
 				{
 					vramAddr += vramInc;
@@ -463,21 +461,28 @@ class PPU implements IState
 
 	inline function incrementY()
 	{
-		var newfinescroll = (vramAddr & 0x7000) + 0x1000;
-		vramAddr &= ~0x7000;
-		if (newfinescroll > 0x7000)
+		if (vramAddr & 0x7000 != 0x7000)
 		{
-			//reset the fine scroll bits and increment tile address to next row
-			vramAddr += 32;
+			vramAddr += 0x1000;
 		}
 		else
 		{
-			vramAddr += newfinescroll;
-		}
-		if (((vramAddr >> 5) & 0x1f) == 30)
-		{
-			vramAddr &= ~0x3e0;
-			vramAddr ^= 0x800;
+			vramAddr &= ~0x7000;
+			var y = (vramAddr & 0x3e0) >> 5;
+			if (y == 29)
+			{
+				y = 0;
+				vramAddr ^= 0x800;
+			}
+			else if (y == 31)
+			{
+				y = 0;
+			}
+			else
+			{
+				++y;
+			}
+			vramAddr = (vramAddr & ~0x3e0) | (y << 5);
 		}
 	}
 
@@ -506,24 +511,24 @@ class PPU implements IState
 		bgAttrShiftRegH |= attrH;
 		bgAttrShiftRegL |= attrL;
 
-		//background fetches
+		// background fetches
 		switch ((cycles - 1) & 7)
 		{
 			case 1:
 				fetchNTByte();
 
 			case 3:
-				//fetch attribute
+				// fetch attribute
 				attr = getAttribute(((vramAddr & 0xc00) | 0x23c0),
 								(vramAddr) & 0x1f,
 								(((vramAddr) & 0x3e0) >> 5));
 
 			case 5:
-				//fetch low bg byte
+				// fetch low bg byte
 				tileL = mapper.ppuRead((tileAddr) + ((vramAddr & 0x7000) >> 12)) & 0xff;
 
 			case 7:
-				//fetch high bg byte
+				// fetch high bg byte
 				tileH = mapper.ppuRead((tileAddr) + ((vramAddr & 0x7000) >> 12) + 8) & 0xff;
 
 				bgShiftRegH |= tileH;
@@ -547,7 +552,7 @@ class PPU implements IState
 
 	inline function fetchNTByte()
 	{
-		//fetch nt byte
+		// fetch nt byte
 		tileAddr = (mapper.ppuRead(
 				((vramAddr & 0xc00) | 0x2000) + (vramAddr & 0x3ff)) << 4)
 				+ (bgPatternAddr);
@@ -555,13 +560,10 @@ class PPU implements IState
 
 	inline function drawBGPixel(bufferOffset:Int):Bool
 	{
-		//background drawing
-		//xScroll picks bits
 		var isBG:Bool;
 		if (!bgClip && (bufferOffset & 0xff) < 8)
 		{
-			//left hand of screen clipping
-			//(needs to be marked as BG and not cause a sprite hit)
+			// left clip
 			bitmap.set(bufferOffset, pal.get(0));
 			isBG = true;
 		}
