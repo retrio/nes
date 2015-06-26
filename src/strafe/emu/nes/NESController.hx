@@ -6,9 +6,22 @@ class NESController
 	var controller:IController;
 	var _currentBtn = 0;
 
+	var keyDefaults:Map<NESControllerButton, Int> = [
+		A => 76,
+		B => 75,
+		Select => 9,
+		Start => 13,
+		Up => 87,
+		Down => 83,
+		Left => 65,
+		Right => 68
+	];
+
 	public function new(controller:IController)
 	{
 		this.controller = controller;
+		//for (btn in defaults.keys())
+		//	k.defineKey(defaults[btn], btn);
 	}
 
 	public function latch()

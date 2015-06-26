@@ -11,6 +11,13 @@ import strafe.emu.nes.ROM;
 
 class NES implements IEmulator implements IState
 {
+	public static inline var WIDTH = 256;
+	public static inline var HEIGHT = 240;
+
+	public var width:Int = WIDTH;
+	public var height:Int = HEIGHT;
+
+	public var buffer:ByteString;
 	public var extensions:Array<String> = ["*.nes"];
 
 	// hardware components
@@ -40,6 +47,8 @@ class NES implements IEmulator implements IState
 		mapper.onLoad();
 		apu.init(cpu, ram);
 		cpu.init(this, ppu);
+
+		buffer = ppu.screenBuffer;
 	}
 
 	public function reset():Void
@@ -75,6 +84,11 @@ class NES implements IEmulator implements IState
 		controller.init(this);
 
 		return port;
+	}
+
+	public function getColor(c:Int)
+	{
+		return Palette.getColor(c);
 	}
 
 	public function writeState(out:Output)

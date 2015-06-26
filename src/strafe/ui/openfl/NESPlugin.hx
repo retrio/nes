@@ -104,7 +104,7 @@ class NESPlugin extends EmulatorPlugin
 				if (skip) return;
 			}
 
-			var bm = nes.ppu.bitmap;
+			var bm = nes.buffer;
 			//for (i in 0 ... loopStart) Memory.setI32(i*4, 0);
 			for (i in loopStart ... loopEnd) // 256 x 240
 			{

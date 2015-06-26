@@ -37,7 +37,7 @@ class PPU implements IState
 	public var t3:ByteString = new ByteString(0x400);
 	public var statusReg:Int=0;
 	public var pal:ByteString = new ByteString(32);
-	public var bitmap:ByteString = new ByteString(240 * 256);
+	public var screenBuffer:ByteString = new ByteString(240 * 256);
 
 	public var scanline:Int = 0;
 	public var cycles:Int = 1;
@@ -111,7 +111,7 @@ class PPU implements IState
 		this.cpu = cpu;
 
 		oam.fillWith(0xff);
-		bitmap.fillWith(0);
+		screenBuffer.fillWith(0);
 		t0.fillWith(0);
 		t1.fillWith(0);
 		t2.fillWith(0);
@@ -432,15 +432,15 @@ class PPU implements IState
 					// rendering is off; draw either the background color or
 					// if the PPU address points to the palette, draw that color
 					var bgcolor = ((vramAddr > 0x3f00 && vramAddr < 0x3fff) ? mapper.ppuRead(vramAddr) : pal.get(0));
-					bitmap.set(bufferOffset, bgcolor);
+					screenBuffer.set(bufferOffset, bgcolor);
 				}
 				// greyscale
 				if (greyscale)
 				{
-					bitmap.set(bufferOffset, bitmap.get(bufferOffset) & 0x30);
+					screenBuffer.set(bufferOffset, screenBuffer.get(bufferOffset) & 0x30);
 				}
 				// color emphasis
-				bitmap.set(bufferOffset, (bitmap.get(bufferOffset) & 0x3f) | emph);
+				screenBuffer.set(bufferOffset, (screenBuffer.get(bufferOffset) & 0x3f) | emph);
 			}
 		}
 
@@ -565,7 +565,7 @@ class PPU implements IState
 		if (!bgClip && (bufferOffset & 0xff) < 8)
 		{
 			// left clip
-			bitmap.set(bufferOffset, pal.get(0));
+			screenBuffer.set(bufferOffset, pal.get(0));
 			isBG = true;
 		}
 		else
@@ -575,7 +575,7 @@ class PPU implements IState
 			var bgPal = (Util.getbitI(bgAttrShiftRegH, 8 - xScroll) << 1)
 					+ Util.getbitI(bgAttrShiftRegL, 8 - xScroll);
 			isBG = (bgPix == 0);
-			bitmap.set(bufferOffset, (isBG ? pal.get(0) : pal.get((bgPal << 2) + bgPix)));
+			screenBuffer.set(bufferOffset, (isBG ? pal.get(0) : pal.get((bgPal << 2) + bgPix)));
 		}
 		return isBG;
 	}
@@ -726,7 +726,7 @@ class PPU implements IState
 			}
 			if (!spritebgflags[index] || bgflag)
 			{
-				bitmap.set(bufferOffset + x, pal.get(spritepals[index] + sprpxl));
+				screenBuffer.set(bufferOffset + x, pal.get(spritepals[index] + sprpxl));
 			}
 		}
 	}

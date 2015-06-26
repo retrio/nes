@@ -11,7 +11,7 @@ import haxe.ds.Vector;
 //@:build(strafe.emu.nes.macro.CPUOptimizer.build())
 class CPU implements IState
 {
-	public var ram:Memory;
+	public var memory:Memory;
 	public var ppu:PPU;
 	public var cycles:Int = 0;
 	public var ticks:Int = 0;
@@ -71,9 +71,9 @@ class CPU implements IState
 	var interruptDelay:Bool = false;
 	var prevIntFlag:Bool = false;
 
-	public function new(ram:Memory)
+	public function new(memory:Memory)
 	{
-		this.ram = ram;
+		this.memory = memory;
 	}
 
 	public function init(nes:NES, ppu:PPU)
@@ -82,13 +82,13 @@ class CPU implements IState
 
 		for (i in 0 ... 0x800)
 		{
-			ram._ram.set(i, 0xff);
+			memory.ram.set(i, 0xff);
 		}
 
-		ram._ram.set(0x0008, 0xf7);
-		ram._ram.set(0x0009, 0xef);
-		ram._ram.set(0x000A, 0xdf);
-		ram._ram.set(0x000F, 0xbf);
+		memory.ram.set(0x0008, 0xf7);
+		memory.ram.set(0x0009, 0xef);
+		memory.ram.set(0x000A, 0xdf);
+		memory.ram.set(0x000F, 0xbf);
 
 		for (i in 0x4000 ...  0x4010)
 		{
@@ -143,7 +143,7 @@ class CPU implements IState
 	public inline function runCycle()
 	{
 		//read(0x4000);
-		if (ram.dmaCounter > 0 && --ram.dmaCounter == 0)
+		if (memory.dmaCounter > 0 && --memory.dmaCounter == 0)
 		{
 			// account for CPU cycles from DMA
 			cycles += 513;
@@ -957,7 +957,7 @@ class CPU implements IState
 
 	public inline function read(addr:Int):Int
 	{
-		return ram.read(addr & 0xffff) & 0xff;
+		return memory.read(addr & 0xffff) & 0xff;
 	}
 
 	inline function dummyRead(addr:Int):Void
@@ -967,7 +967,7 @@ class CPU implements IState
 
 	public inline function write(addr:Int, data:Int):Void
 	{
-		ram.write(addr & 0xffff, data & 0xff);
+		memory.write(addr & 0xffff, data & 0xff);
 	}
 
 	inline function doNmi()
