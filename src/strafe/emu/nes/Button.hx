@@ -2,7 +2,7 @@ package strafe.emu.nes;
 
 
 @:enum
-abstract NESControllerButton(Int) from Int to Int
+abstract Button(Int) from Int to Int
 {
 	var A = 0;
 	var B = 1;

@@ -4,6 +4,7 @@
 	<app main="Main" path="bin" file="strafe"/>
 	<app path="bin-profile" if="profile"/>
 	<app path="bin-cputrace" if="cputrace"/>
+	<app path="bin-debug" if="debug"/>
 	<!--haxeflag name="--no-inline" if="advanced-telemetry"/-->
 
 	<window fps="60" background="0x000000"/>
