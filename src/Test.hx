@@ -1,7 +1,7 @@
-class Test extends strafe.Test
+class Test extends retrio.Test
 {
 	static function main()
 	{
-		strafe.Test.runTests(new strafe.emu.nes.NES());
+		retrio.Test.runTests(new retrio.emu.nes.NES());
 	}
 }

@@ -1,10 +1,10 @@
-package strafe.emu.nes.mappers;
+package retrio.emu.nes.mappers;
 
 import haxe.ds.Vector;
-import strafe.emu.nes.Mapper;
+import retrio.emu.nes.Mapper;
 
 
-@:build(strafe.macro.Optimizer.build())
+@:build(retrio.macro.Optimizer.build())
 class MMC3Mapper extends Mapper
 {
 	var bank = 0;

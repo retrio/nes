@@ -1,4 +1,4 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 
 @:enum

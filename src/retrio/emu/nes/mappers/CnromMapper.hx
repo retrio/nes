@@ -1,9 +1,9 @@
-package strafe.emu.nes.mappers;
+package retrio.emu.nes.mappers;
 
-import strafe.emu.nes.Mapper;
+import retrio.emu.nes.Mapper;
 
 
-@:build(strafe.macro.Optimizer.build())
+@:build(retrio.macro.Optimizer.build())
 class CnromMapper extends Mapper
 {
 	override public function write(addr:Int, data:Int)

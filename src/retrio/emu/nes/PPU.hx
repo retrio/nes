@@ -1,10 +1,10 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 import haxe.ds.Vector;
-import strafe.ByteString;
+import retrio.ByteString;
 
 
-@:build(strafe.macro.Optimizer.build())
+@:build(retrio.macro.Optimizer.build())
 class PPU implements IState
 {
 	static inline var OPEN_BUS_DECAY_CYCLES = 1000000;

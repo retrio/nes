@@ -1,4 +1,4 @@
-package strafe.ui.openfl;
+package retrio.ui.openfl;
 
 import flash.Lib;
 import flash.Memory;
@@ -11,8 +11,8 @@ import flash.geom.Rectangle;
 import flash.geom.Matrix;
 import flash.utils.ByteArray;
 import flash.utils.Endian;
-import strafe.emu.nes.NES;
-import strafe.emu.nes.Palette;
+import retrio.emu.nes.NES;
+import retrio.emu.nes.Palette;
 
 
 class NESPlugin extends EmulatorPlugin

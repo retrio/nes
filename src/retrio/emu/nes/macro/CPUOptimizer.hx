@@ -1,9 +1,9 @@
-package strafe.emu.nes.macro;
+package retrio.emu.nes.macro;
 
 import haxe.macro.Expr;
 import haxe.macro.ExprTools;
 import haxe.macro.Context;
-import strafe.emu.nes.OpCode;
+import retrio.emu.nes.OpCode;
 
 
 class CPUOptimizer
@@ -56,7 +56,7 @@ class CPUOptimizer
 			default: {}
 		}
 
-		strafe.macro.Optimizer.simplify(e);
+		retrio.macro.Optimizer.simplify(e);
 
 		ExprTools.iter(e, optimizeRunCycle);
 	}
@@ -85,8 +85,8 @@ class CPUOptimizer
 							if (OpCode.opCodeNames[code] == caseName)
 							{
 								// this byte represents this operation
-								var substitutedExpr = //strafe.macro.Optimizer.simplify(
-									strafe.macro.Optimizer.substituteVariable(
+								var substitutedExpr = //retrio.macro.Optimizer.simplify(
+									retrio.macro.Optimizer.substituteVariable(
 										inlineAddrMode(caseExpr.expr), "mode", CInt(Std.string(OpCode.getAddressingMode(byte))));//);
 
 								newCases.push({values: [{expr:EConst(CInt(Std.string(byte))), pos:val.pos}],

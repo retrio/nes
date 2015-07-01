@@ -1,7 +1,7 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 import haxe.ds.Vector;
-import strafe.ByteString;
+import retrio.ByteString;
 
 
 class Memory

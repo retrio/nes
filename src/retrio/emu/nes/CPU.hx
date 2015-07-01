@@ -1,4 +1,4 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 import haxe.ds.Vector;
 
@@ -8,7 +8,7 @@ import haxe.ds.Vector;
 // might do better by inlining getAddress/getValue and using constant
 // propogation to eliminate the branching in those functions, but since I'm
 // already aggressively inlining, it might not be worth the code size increase
-//@:build(strafe.emu.nes.macro.CPUOptimizer.build())
+//@:build(retrio.emu.nes.macro.CPUOptimizer.build())
 class CPU implements IState
 {
 	public var memory:Memory;

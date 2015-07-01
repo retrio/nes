@@ -1,11 +1,11 @@
-import strafe.ui.openfl.KeyboardController;
-import strafe.FileWrapper;
-import strafe.ui.openfl.NESPlugin;
-import strafe.ui.openfl.Shell;
-import strafe.emu.nes.Button;
+import retrio.ui.openfl.KeyboardController;
+import retrio.FileWrapper;
+import retrio.ui.openfl.NESPlugin;
+import retrio.ui.openfl.Shell;
+import retrio.emu.nes.Button;
 
 
-class Main extends strafe.ui.openfl.Shell
+class Main extends retrio.ui.openfl.Shell
 {
 	function new()
 	{
@@ -45,7 +45,7 @@ class Main extends strafe.ui.openfl.Shell
 		super.onStage(e);
 
 		var plugin = new NESPlugin();
-		var controller = new strafe.ui.openfl.KeyboardController();
+		var controller = new retrio.ui.openfl.KeyboardController();
 
 		var keyDefaults:Map<Button, Int> = [
 			A => 76,

@@ -1,8 +1,8 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 import haxe.ds.Vector;
-import strafe.ByteString;
-import strafe.emu.nes.mappers.*;
+import retrio.ByteString;
+import retrio.emu.nes.mappers.*;
 
 
 class Mapper implements IState

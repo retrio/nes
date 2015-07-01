@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
-	<meta title="strafe" package="io.strafe" version="1.0.0" company="MonsterFace Games"/>
-	<app main="Main" path="bin" file="strafe"/>
+	<meta title="retrio" package="io.retr" version="1.0.0" company="MonsterFace Games"/>
+	<app main="Main" path="bin" file="retrio"/>
 	<app path="bin-profile" if="profile"/>
 	<app path="bin-cputrace" if="cputrace"/>
 	<app path="bin-debug" if="debug"/>
@@ -20,5 +20,5 @@
 	<haxelib name="format"/>
 	<haxelib name="systools" if="native"/>
 	<haxelib name="openfl"/>
-	<haxelib name="strafe-core" path="../"/>
+	<haxelib name="retrio-core" path="../"/>
 </project>

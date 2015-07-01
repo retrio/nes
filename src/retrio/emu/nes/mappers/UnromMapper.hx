@@ -1,10 +1,10 @@
-package strafe.emu.nes.mappers;
+package retrio.emu.nes.mappers;
 
-import strafe.emu.nes.Mapper;
+import retrio.emu.nes.Mapper;
 
 
-@:build(strafe.macro.Optimizer.build())
-class AoromMapper extends Mapper
+@:build(retrio.macro.Optimizer.build())
+class UnromMapper extends Mapper
 {
 	var bank:Int = 0;
 
@@ -29,12 +29,12 @@ class AoromMapper extends Mapper
 		{
 			ppu.needCatchUp = true;
 
-			//remap all 32k of PRG to 32 x bank #
-			@unroll for (i in 0 ... 32)
+			bank = data & 0xf;
+			// remap switchable 1st PRG bank
+			@unroll for (i in 0 ... 16)
 			{
-				prgMap[i] = (1024 * (i + (32 * (data & 15)))) & (rom.prgSize - 1);
+				prgMap[i] = (0x400 * (i + 16 * bank)) & (rom.prgSize - 1);
 			}
-			mirror = Util.getbit(data, 4) ? SS_MIRROR1 : SS_MIRROR0;
 		}
 	}
 }

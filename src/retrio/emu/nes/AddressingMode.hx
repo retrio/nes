@@ -1,4 +1,4 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 
 // http://www.obelisk.demon.co.uk/6502/addressing.html

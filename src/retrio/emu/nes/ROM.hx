@@ -1,10 +1,10 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 import haxe.io.Bytes;
 import haxe.ds.Vector;
 import haxe.io.Input;
-import strafe.ByteString;
-import strafe.FileWrapper;
+import retrio.ByteString;
+import retrio.FileWrapper;
 
 
 class ROM implements IState

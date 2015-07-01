@@ -1,12 +1,12 @@
-package strafe.emu.nes;
+package retrio.emu.nes;
 
 import haxe.ds.Vector;
 import haxe.io.Output;
-import strafe.FileWrapper;
-import strafe.IController;
-import strafe.emu.nes.CPU;
-import strafe.emu.nes.PPU;
-import strafe.emu.nes.ROM;
+import retrio.FileWrapper;
+import retrio.IController;
+import retrio.emu.nes.CPU;
+import retrio.emu.nes.PPU;
+import retrio.emu.nes.ROM;
 
 
 class NES implements IEmulator implements IState
