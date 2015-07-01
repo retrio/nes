@@ -19,6 +19,21 @@ Other dependencies:
 Once retrio-core is installed, run `openfl test flash` to start the emulator.
 
 
+Tests
+-----
+
+Retrio emulators include automated unit tests utilizing special testing ROMs. 
+These can be executed with `./runtests`. Each test will run a specific test ROM, 
+comparing a hash of the screen contents with what the screen should look like on 
+success, until the screen stops changing or the success state is reached.
+
+To add new tests, add the ROM to the assets/roms/test directory and add an entry 
+in tests.xml. Run the test suite; because your new test doesn't have a success 
+hash yet, its status will be inconclusive. Check the image that is generated in 
+test_results for that test and, if it was successful, copy and paste the hash 
+for your test from stdout into tests.xml.
+
+
 Copyright
 ---------
 
