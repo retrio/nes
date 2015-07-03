@@ -1,7 +1,7 @@
-import retrio.ui.openfl.KeyboardController;
 import retrio.FileWrapper;
 import retrio.ui.openfl.NESPlugin;
 import retrio.ui.openfl.Shell;
+import retrio.ui.openfl.controllers.KeyboardController;
 import retrio.emu.nes.Button;
 
 
@@ -45,7 +45,7 @@ class Main extends retrio.ui.openfl.Shell
 		super.onStage(e);
 
 		var plugin = new NESPlugin();
-		var controller = new retrio.ui.openfl.KeyboardController();
+		var controller = new KeyboardController();
 
 		var keyDefaults:Map<Button, Int> = [
 			A => 76,
