@@ -111,11 +111,11 @@ class NESPlugin extends EmulatorPlugin
 				Memory.setI32((i-loopStart)*4, Palette.getColor(bm.get(i)));
 			}
 			//for (i in loopEnd ... 256*240) Memory.setI32(i*4, 0);
-		}
 
-		pixels.position = 0;
-		bmpData.setPixels(r, pixels);
-		canvas.draw(bmpData, m);
+			pixels.position = 0;
+			bmpData.setPixels(r, pixels);
+			canvas.draw(bmpData, m);
+		}
 	}
 
 	function initScreen(width:Int, height:Int)
