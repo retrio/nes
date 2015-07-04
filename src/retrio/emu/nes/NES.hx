@@ -112,7 +112,7 @@ class NES implements IEmulator implements IState
 		if (rom.hasSram && rom.sramDirty && io != null)
 		{
 			var data = rom.prgRam;
-			io.writeFile(romName + ".srm", data);
+			io.writeByteStringToFile(romName + ".srm", data);
 			rom.sramDirty = false;
 			_saveCounter = 0;
 		}
@@ -123,8 +123,11 @@ class NES implements IEmulator implements IState
 		if (io.fileExists(romName + ".srm"))
 		{
 			var file = io.readFile(romName + ".srm");
-			rom.prgRam.readFrom(file);
-			rom.sramDirty = false;
+			if (file != null)
+			{
+				rom.prgRam.readFrom(file);
+				rom.sramDirty = false;
+			}
 		}
 	}
 
