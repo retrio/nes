@@ -10,8 +10,9 @@ class CPUOptimizer
 {
 	public static function build()
 	{
-		var fields = haxe.macro.Context.getBuildFields().map(optimizeFields);
-		return fields;
+		var buildFields = haxe.macro.Context.getBuildFields();
+		retrio.macro.Optimizer.findInlinedFunctions(buildFields);
+		return buildFields.map(optimizeFields);
 	}
 
 	static function optimizeFields(field:Field):Field
@@ -85,9 +86,9 @@ class CPUOptimizer
 							if (OpCode.opCodeNames[code] == caseName)
 							{
 								// this byte represents this operation
-								var substitutedExpr = //retrio.macro.Optimizer.simplify(
+								var substitutedExpr = retrio.macro.Optimizer.simplify(
 									retrio.macro.Optimizer.substituteVariable(
-										inlineAddrMode(caseExpr.expr), "mode", CInt(Std.string(OpCode.getAddressingMode(byte))));//);
+										inlineAddrMode(caseExpr.expr), "mode", {pos: val.pos, expr: EConst(CInt(Std.string(OpCode.getAddressingMode(byte))))}));
 
 								newCases.push({values: [{expr:EConst(CInt(Std.string(byte))), pos:val.pos}],
 									expr: substitutedExpr});

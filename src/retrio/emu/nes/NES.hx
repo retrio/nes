@@ -2,21 +2,19 @@ package retrio.emu.nes;
 
 import haxe.ds.Vector;
 import haxe.io.Output;
-import retrio.FileWrapper;
-import retrio.IController;
-import retrio.emu.nes.CPU;
-import retrio.emu.nes.PPU;
-import retrio.emu.nes.ROM;
 
 
 class NES implements IEmulator implements IState
 {
 	public static inline var WIDTH = 256;
 	public static inline var HEIGHT = 240;
+	// minimum # of frames to wait between saves
+	public static inline var SRAM_SAVE_FRAMES = 60;
 
 	public var width:Int = WIDTH;
 	public var height:Int = HEIGHT;
 
+	public var io:IEnvironment;
 	public var buffer:ByteString;
 	public var extensions:Array<String> = ["*.nes"];
 
@@ -28,6 +26,9 @@ class NES implements IEmulator implements IState
 	public var apu:APU;
 	public var mapper:Mapper;
 	public var controllers:Vector<NESController> = new Vector(2);
+
+	var _saveCounter:Int = 0;
+	var romName:String;
 
 	public function new() {}
 
@@ -49,6 +50,9 @@ class NES implements IEmulator implements IState
 		cpu.init(this, ppu);
 
 		buffer = ppu.screenBuffer;
+
+		romName = gameData.name;
+		loadSram();
 	}
 
 	public function reset():Void
@@ -58,7 +62,19 @@ class NES implements IEmulator implements IState
 
 	public function frame()
 	{
-		cpu.runFrame();
+		if (rom.sramDirty)
+		{
+			cpu.runFrame();
+			if (_saveCounter < SRAM_SAVE_FRAMES)
+			{
+				++_saveCounter;
+			}
+			else
+			{
+				saveSram();
+			}
+		}
+		else _saveCounter = 0;
 	}
 
 	public function addController(controller:IController, ?port:Int=null):Null<Int>
@@ -91,6 +107,27 @@ class NES implements IEmulator implements IState
 		return Palette.getColor(c);
 	}
 
+	function saveSram()
+	{
+		if (rom.hasSram && rom.sramDirty && io != null)
+		{
+			var data = rom.prgRam;
+			io.writeFile(romName + ".srm", data);
+			rom.sramDirty = false;
+			_saveCounter = 0;
+		}
+	}
+
+	function loadSram()
+	{
+		if (io.fileExists(romName + ".srm"))
+		{
+			var file = io.readFile(romName + ".srm");
+			rom.prgRam.readFrom(file);
+			rom.sramDirty = false;
+		}
+	}
+
 	public function writeState(out:Output)
 	{
 		rom.writeState(out);
@@ -99,6 +136,4 @@ class NES implements IEmulator implements IState
 		cpu.writeState(out);
 		ppu.writeState(out);
 	}
-
-
 }

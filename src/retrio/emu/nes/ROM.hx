@@ -21,7 +21,8 @@ class ROM implements IState
 
 	public var hasPrgRam:Bool = true;
 	public var hasChrRam:Bool = false;
-	public var saveRam:Bool = false;
+	public var hasSram:Bool = false;
+	public var sramDirty:Bool = false;
 
 	var mapperNumber:Int=0;
 
@@ -47,7 +48,7 @@ class ROM implements IState
 		mirror = fourScreenMirror ? FOUR_SCREEN_MIRROR
 			: verticalMirror ? V_MIRROR : H_MIRROR;
 
-		saveRam = Util.getbit(f6, 1);
+		hasSram = Util.getbit(f6, 1);
 
 		//prgRamSize = file.readByte() * 0x2000;
 

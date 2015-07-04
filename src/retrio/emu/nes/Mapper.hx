@@ -123,7 +123,9 @@ class Mapper implements IState
 	{
 		if (addr >= 0x6000 && addr < 0x8000)
 		{
-			rom.prgRam.set(addr & 0x1fff, data);
+			var a = addr & 0x1fff;
+			rom.sramDirty = rom.sramDirty || rom.prgRam[a] != data;
+			rom.prgRam.set(a, data);
 		}
 	}
 

@@ -15,8 +15,11 @@ import retrio.emu.nes.NES;
 import retrio.emu.nes.Palette;
 
 
+@:access(retrio.emu.nes.NES)
 class NESPlugin extends EmulatorPlugin
 {
+	static var _registered = Shell.registerPlugin("nes", new NESPlugin());
+
 	var loopStart:Int = 0;
 	var loopEnd:Int = 0;
 	var clipTop(default, set):Int = 0;
@@ -57,18 +60,16 @@ class NESPlugin extends EmulatorPlugin
 	public function new()
 	{
 		super();
+
 		this.emu = this.nes = new NES();
 		extensions = nes.extensions;
 
-		_stage.quality = flash.display.StageQuality.LOW;
 		bmpData = new BitmapData(256, 240, false, 0);
 
 		pixels.endian = Endian.BIG_ENDIAN;
 		pixels.clear();
 		for (i in 0 ... 256*240*4)
 			pixels.writeByte(0);
-
-		Memory.select(pixels);
 
 		clipTop = 8;
 		clipBottom = 8;
@@ -105,17 +106,25 @@ class NESPlugin extends EmulatorPlugin
 			}
 
 			var bm = nes.buffer;
-			//for (i in 0 ... loopStart) Memory.setI32(i*4, 0);
 			for (i in loopStart ... loopEnd) // 256 x 240
 			{
 				Memory.setI32((i-loopStart)*4, Palette.getColor(bm.get(i)));
 			}
-			//for (i in loopEnd ... 256*240) Memory.setI32(i*4, 0);
 
 			pixels.position = 0;
 			bmpData.setPixels(r, pixels);
 			canvas.draw(bmpData, m);
 		}
+	}
+
+	override public function activate()
+	{
+		Memory.select(pixels);
+	}
+
+	override public function deactivate()
+	{
+		nes.saveSram();
 	}
 
 	function initScreen(width:Int, height:Int)
