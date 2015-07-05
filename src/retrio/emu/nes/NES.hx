@@ -29,10 +29,11 @@ class NES implements IEmulator implements IState
 
 	var _saveCounter:Int = 0;
 	var romName:String;
+	var useSram:Bool = true;
 
 	public function new() {}
 
-	public function loadGame(gameData:FileWrapper)
+	public function loadGame(gameData:FileWrapper, ?useSram:Bool=true)
 	{
 		ram = new Memory();
 
@@ -52,7 +53,8 @@ class NES implements IEmulator implements IState
 		buffer = ppu.screenBuffer;
 
 		romName = gameData.name;
-		loadSram();
+		this.useSram = useSram;
+		if (useSram) loadSram();
 	}
 
 	public function reset():Void
@@ -62,9 +64,9 @@ class NES implements IEmulator implements IState
 
 	public function frame()
 	{
+		cpu.runFrame();
 		if (rom.sramDirty)
 		{
-			cpu.runFrame();
 			if (_saveCounter < SRAM_SAVE_FRAMES)
 			{
 				++_saveCounter;
@@ -109,7 +111,7 @@ class NES implements IEmulator implements IState
 
 	function saveSram()
 	{
-		if (rom.hasSram && rom.sramDirty && io != null)
+		if (useSram && rom.hasSram && rom.sramDirty && io != null)
 		{
 			var data = rom.prgRam;
 			io.writeByteStringToFile(romName + ".srm", data);
@@ -120,7 +122,7 @@ class NES implements IEmulator implements IState
 
 	function loadSram()
 	{
-		if (io.fileExists(romName + ".srm"))
+		if (useSram && io.fileExists(romName + ".srm"))
 		{
 			var file = io.readFile(romName + ".srm");
 			if (file != null)

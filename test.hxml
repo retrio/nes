@@ -3,6 +3,7 @@
 -cp src
 -D test
 -lib format
--lib strafe-core
+-lib retrio-core
+-lib systools
 
 -cpp test
