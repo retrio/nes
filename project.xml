@@ -17,8 +17,5 @@
 
 	<source path="src"/>
 
-	<haxelib name="format"/>
-	<haxelib name="systools" if="native"/>
-	<haxelib name="openfl"/>
-	<haxelib name="retrio-core" path="../"/>
+	<haxelib name="retrio-core"/>
 </project>

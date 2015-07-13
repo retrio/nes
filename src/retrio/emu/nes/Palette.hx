@@ -79,7 +79,7 @@ class Palette
 
 	static inline function compose(r:Float, g:Float, b:Float)
 	{
-#if flash
+#if (flash || legacy)
 		// store colors as little-endian for flash.Memory
 		return (0xff) | ((Std.int(r) & 0xff) << 8) | ((Std.int(g) & 0xff) << 16) | ((Std.int(b) & 0xff) << 24);
 #else
