@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
-	<meta title="retrio" package="io.retr" version="1.0.0" company="MonsterFace Games"/>
+	<meta title="retrio" package="io.retr" version="1.0.0" company="retr.io"/>
 	<app main="Main" path="bin" file="retrio"/>
 	<app path="bin-profile" if="profile"/>
 	<app path="bin-cputrace" if="cputrace"/>
