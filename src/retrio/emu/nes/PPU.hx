@@ -17,9 +17,9 @@ class PPU implements IState
 
 	public var mapper:Mapper;
 	public var cpu:CPU;
-	public var frameCount:Int = 1;
-	public var stolenCycles:Int = 0;
-	public var finished:Bool = false;
+	@:state public var frameCount:Int = 1;
+	@:state public var stolenCycles:Int = 0;
+	@:state public var finished:Bool = false;
 	public var needCatchUp(default, set):Bool = false;
 	inline function set_needCatchUp(b:Bool)
 	{
@@ -30,64 +30,60 @@ class PPU implements IState
 	public static inline var RESOLUTION_X=256;
 	public static inline var RESOLUTION_Y=240;
 
-	public var oam:ByteString = new ByteString(0x100);
-	public var t0:ByteString = new ByteString(0x400);
-	public var t1:ByteString = new ByteString(0x400);
-	public var t2:ByteString = new ByteString(0x400);
-	public var t3:ByteString = new ByteString(0x400);
-	public var statusReg:Int=0;
-	public var pal:ByteString = new ByteString(32);
+	@:state public var oam:ByteString = new ByteString(0x100);
+	@:state public var nameTables:Vector<ByteString> = new Vector(4);
+	@:state public var pal:ByteString = new ByteString(32);
 	public var screenBuffer:ByteString = new ByteString(240 * 256);
 
-	public var scanline:Int = 0;
-	public var cycles:Int = 1;
+	@:state public var scanline:Int = 0;
+	@:state public var cycles:Int = 1;
 
-	var vramAddr:Int = 0;
-	var vramAddrTemp:Int = 0;
-	var xScroll:Int = 0;
-	var even = true;
+	@:state var vramAddr:Int = 0;
+	@:state var vramAddrTemp:Int = 0;
+	@:state var xScroll:Int = 0;
+	@:state var even = true;
 
-	var bgPatternAddr = 0x1000;
-	var sprPatternAddr = 0;
+	@:state var bgPatternAddr = 0x1000;
+	@:state var sprPatternAddr = 0;
 
-	var oamAddr:Int = 0;
+	@:state var oamAddr:Int = 0;
 
-	var bgShiftRegH:Int = 0;
-	var bgShiftRegL:Int = 0;
-	var bgAttrShiftRegH:Int = 0;
-	var bgAttrShiftRegL:Int = 0;
+	@:state var bgShiftRegH:Int = 0;
+	@:state var bgShiftRegL:Int = 0;
+	@:state var bgAttrShiftRegH:Int = 0;
+	@:state var bgAttrShiftRegL:Int = 0;
 	// $2000 PPUCTRL registers
-	var nmiEnabled:Bool = false;
-	var ntAddr:Int = 0;
-	var vramInc:Int = 1;
-	var tallSprites:Bool = false;
+	@:state var nmiEnabled:Bool = false;
+	@:state var ntAddr:Int = 0;
+	@:state var vramInc:Int = 1;
+	@:state var tallSprites:Bool = false;
 	// $2001 PPUMASK registers
-	var greyscale:Bool = false;
-	var bgClip:Bool = false;
-	var sprClip:Bool = false;
-	var bgRender:Bool = false;
-	var sprRender:Bool = false;
-	var emph:Int = 0;
+	@:state var greyscale:Bool = false;
+	@:state var bgClip:Bool = false;
+	@:state var sprClip:Bool = false;
+	@:state var bgRender:Bool = false;
+	@:state var sprRender:Bool = false;
+	@:state var emph:Int = 0;
 	// $2002 PPUSTATUS registers
-	var spriteOverflow:Bool = false;
-	var sprite0:Bool = false;
-	var vblank:Bool = false;
+	@:state var spriteOverflow:Bool = false;
+	@:state var sprite0:Bool = false;
+	@:state var vblank:Bool = false;
 
-	var spritebgflags:Vector<Bool> = new Vector(8);
-	var spriteShiftRegH:Vector<Int> = new Vector(8);
-	var spriteShiftRegL:Vector<Int> = new Vector(8);
-	var spriteXlatch:Vector<Int> = new Vector(8);
-	var spritepals:Vector<Int> = new Vector(8);
-	var openBus:Int = 0;
-	var openBusDecayH:Int = 0;
-	var openBusDecayL:Int = 0;
-	var readBuffer:Int = 0;
-	var tileAddr:Int = 0;
-	var tileL:Int = 0;
-	var tileH:Int = 0;
-	var attr:Int = 0;
-	var attrH:Int = 0;
-	var attrL:Int = 0;
+	@:state var spriteBgFlags:Vector<Bool> = new Vector(8);
+	@:state var spriteShiftRegH:Vector<Int> = new Vector(8);
+	@:state var spriteShiftRegL:Vector<Int> = new Vector(8);
+	@:state var spriteXlatch:Vector<Int> = new Vector(8);
+	@:state var spritepals:Vector<Int> = new Vector(8);
+	@:state var openBus:Int = 0;
+	@:state var openBusDecayH:Int = 0;
+	@:state var openBusDecayL:Int = 0;
+	@:state var readBuffer:Int = 0;
+	@:state var tileAddr:Int = 0;
+	@:state var tileL:Int = 0;
+	@:state var tileH:Int = 0;
+	@:state var attr:Int = 0;
+	@:state var attrH:Int = 0;
+	@:state var attrL:Int = 0;
 
 	var off:Int = 0;
 	var index:Int = 0;
@@ -95,7 +91,6 @@ class PPU implements IState
 	var found:Int = 0;
 	var sprite0here:Bool = false;
 	var suppress:Bool = false;
-	var sprite0coming:Null<Int> = null;
 
 	var enabled(get, never):Bool;
 	inline function get_enabled()
@@ -112,10 +107,11 @@ class PPU implements IState
 
 		oam.fillWith(0xff);
 		screenBuffer.fillWith(0);
-		t0.fillWith(0);
-		t1.fillWith(0);
-		t2.fillWith(0);
-		t3.fillWith(0);
+		for (i in 0 ... 4)
+		{
+			nameTables[i] = new ByteString(0x400);
+			nameTables[i].fillWith(0);
+		}
 
 		pal = new ByteString(defaultPalette.length);
 		for (i in 0 ... pal.length) pal.set(i, defaultPalette[i]);
@@ -287,35 +283,6 @@ class PPU implements IState
 				}
 		}
 	}
-
-	/*public inline function runFrame()
-	{
-		++frameCount;
-		scanline = 0;
-		var skip = (bgRender && (frameCount & 1 == 1))
-			? 1 : 0;
-		cycles = skip;
-
-		while (scanline < 262)
-		{
-			if (scanline <= 241 || scanline >= 260)
-			{
-				clock();
-			}
-			else
-			{
-				yieldToCPU();
-				signalNMI();
-			}
-
-			if (++cycles > 340)
-			{
-				mapper.onScanline(scanline);
-				cycles = 0;
-				++scanline;
-			}
-		}
-	}*/
 
 	inline function incPixel()
 	{
@@ -491,7 +458,7 @@ class PPU implements IState
 
 	inline function incrementX()
 	{
-		//increment horizontal part of vramAddr
+		// increment horizontal part of vramAddr
 		// if coarse X == 31
 		if ((vramAddr & 0x001F) == 31)
 		{
@@ -630,7 +597,7 @@ class PPU implements IState
 			// set up sprite for rendering
 			var oamextra = oam.get(spritestart + 2);
 			// bg flag
-			spritebgflags[found] = Util.getbit(oamextra, 5);
+			spriteBgFlags[found] = Util.getbit(oamextra, 5);
 			// x value
 			spriteXlatch[found] = oam.get(spritestart + 3);
 			spritepals[found] = ((oamextra & 3) + 4) * 4;
@@ -724,7 +691,7 @@ class PPU implements IState
 				// sprite 0 hit
 				sprite0 = true;
 			}
-			if (!spritebgflags[index] || bgflag)
+			if (!spriteBgFlags[index] || bgflag)
 			{
 				screenBuffer.set(bufferOffset + x, pal.get(spritepals[index] + sprpxl));
 			}
@@ -756,10 +723,5 @@ class PPU implements IState
 				return base & 3;
 			}
 		}
-	}
-
-	public function writeState(out:haxe.io.Output)
-	{
-		// TODO
 	}
 }

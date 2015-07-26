@@ -13,63 +13,35 @@ class CPU implements IState
 {
 	public var memory:Memory;
 	public var ppu:PPU;
-	public var cycles:Int = 0;
-	public var ticks:Int = 0;
-	public var cycleCount:Int = 0;
-	public var nmi:Bool = false;
-	public var pc:Int = 0x8000;	// program counter
-	public var dma:Int = 0;
+	@:state public var cycles:Int = 0;
+	@:state public var ticks:Byte = 0;
+	@:state public var cycleCount:Int = 0;
+	@:state public var nmi:Bool = false;
+	@:state public var pc:Int = 0x8000;	// program counter
+	@:state public var dma:Int = 0;
 
-	public var interrupt:Int = 0;
+	@:state public var interrupt:Int = 0;
 
-	var nmiQueued:Bool = false;
-	var prevNmi:Bool = false;
-	var sp:Int = 0xFD;			// stack pointer
-	var accumulator:Int = 0;	// accumulator
-	var x:Int = 0;				// x register
-	var y:Int = 0;				// y register
+	@:state var nmiQueued:Bool = false;
+	@:state var prevNmi:Bool = false;
+	@:state var sp:Byte = 0xFD;			// stack pointer
+	@:state var accumulator:Byte = 0;	// accumulator
+	@:state var x:Byte = 0;				// x register
+	@:state var y:Byte = 0;				// y register
+
+	@:state var cf:Bool;		// carry
+	@:state var zf:Bool;		// zero
+	@:state var id:Bool;		// interrupt disable
+	@:state var dm:Bool;		// decimal mode
+	@:state var bc:Bool;		// break command
+	@:state var uf:Bool;		// unused flag
+	@:state var of:Bool;		// overflow
+	@:state var nf:Bool;		// negative
+
+	@:state var interruptDelay:Bool = false;
+	@:state var prevIntFlag:Bool = false;
 
 	var address:Int;
-
-#if vectorflags
-	var flags:Vector<Bool> = new Vector(8);
-	var cf(get, set):Bool;		// carry
-	inline function get_cf() return flags[0];
-	inline function set_cf(f:Bool) return flags[0] = f;
-	var zf(get, set):Bool;		// zero
-	inline function get_zf() return flags[1];
-	inline function set_zf(f:Bool) return flags[1] = f;
-	var id(get, set):Bool;		// interrupt disable
-	inline function get_id() return flags[2];
-	inline function set_id(f:Bool) return flags[2] = f;
-	var dm(get, set):Bool;		// decimal mode
-	inline function get_dm() return flags[3];
-	inline function set_dm(f:Bool) return flags[3] = f;
-	var bc(get, set):Bool;		// break command
-	inline function get_bc() return flags[4];
-	inline function set_bc(f:Bool) return flags[4] = f;
-	var uf(get, set):Bool;		// unused flag
-	inline function get_uf() return flags[5];
-	inline function set_uf(f:Bool) return flags[5] = f;
-	var of(get, set):Bool;		// overflow
-	inline function get_of() return flags[6];
-	inline function set_of(f:Bool) return flags[6] = f;
-	var nf(get, set):Bool;		// negative
-	inline function get_nf() return flags[7];
-	inline function set_nf(f:Bool) return flags[7] = f;
-#else
-	var cf:Bool;		// carry
-	var zf:Bool;		// zero
-	var id:Bool;		// interrupt disable
-	var dm:Bool;		// decimal mode
-	var bc:Bool;		// break command
-	var uf:Bool;		// unused flag
-	var of:Bool;		// overflow
-	var nf:Bool;		// negative
-#end
-
-	var interruptDelay:Bool = false;
-	var prevIntFlag:Bool = false;
 
 	public function new(memory:Memory)
 	{
@@ -1003,10 +975,5 @@ class CPU implements IState
 	{
 		interruptDelay = true;
 		prevIntFlag = id;
-	}
-
-	public function writeState(out:haxe.io.Output)
-	{
-		// TODO
 	}
 }

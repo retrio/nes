@@ -7,19 +7,19 @@ import retrio.emu.nes.Mapper;
 @:build(retrio.macro.Optimizer.build())
 class MMC3Mapper extends Mapper
 {
-	var bank = 0;
-	var prgConfig = false;
-	var chrConfig = false;
-	var irqCtrReload = 0;
-	var irqCtr = 0;
-	var irqEnable = false;
-	var irqReload = false;
-	var bank6 = 0;
-	var chrReg:Vector<Int> = new Vector(6);
-	var interrupted = false;
+	@:state var bank = 0;
+	@:state var prgConfig = false;
+	@:state var chrConfig = false;
+	@:state var irqCtrReload = 0;
+	@:state var irqCtr = 0;
+	@:state var irqEnable = false;
+	@:state var irqReload = false;
+	@:state var bank6 = 0;
+	@:state var chrReg:Vector<Int> = new Vector(6);
+	@:state var interrupted = false;
 
-	var lastA12 = false;
-	var a12timer = 0;
+	@:state var lastA12 = false;
+	@:state var a12timer = 0;
 
 	override public function onLoad()
 	{

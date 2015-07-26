@@ -6,15 +6,15 @@ import retrio.emu.nes.Mapper;
 @:build(retrio.macro.Optimizer.build())
 class MMC1Mapper extends Mapper
 {
-	var mmc1shift:Int = 0;
-	var mmc1latch:Int = 0;
-	var mmc1ctrl:Int = 0xc;
-	var mmc1chr0:Int = 0;
-	var mmc1chr1:Int = 0;
-	var mmc1prg:Int = 0;
-	var soromlatch:Bool = false;
+	@:state var mmc1shift:Int = 0;
+	@:state var mmc1latch:Int = 0;
+	@:state var mmc1ctrl:Int = 0xc;
+	@:state var mmc1chr0:Int = 0;
+	@:state var mmc1chr1:Int = 0;
+	@:state var mmc1prg:Int = 0;
+	@:state var soromlatch:Bool = false;
 
-	var lastCycle:Int = 0;
+	@:state var lastCycle:Int = 0;
 
 	override public function onLoad()
 	{

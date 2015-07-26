@@ -12,19 +12,19 @@ class ROM implements IState
 	public var mapper:Mapper;
 	public var mirror:MirrorMode;
 
-	public var prgRom:ByteString;
-	public var prgRam:ByteString;
-	public var chr:ByteString;				// ROM or RAM
+	@:state public var prgRom:ByteString;
+	@:state public var prgRam:ByteString;
+	@:state public var chr:ByteString;				// ROM or RAM
 
-	public var prgSize:Int = 0;				// size of PRG ROM (# of 0x4000 blocks)
-	public var chrSize:Int = 0;				// size of CHR ROM (# of 0x2000 blocks)
+	@:state public var prgSize:Int = 0;				// size of PRG ROM (# of 0x4000 blocks)
+	@:state public var chrSize:Int = 0;				// size of CHR ROM (# of 0x2000 blocks)
 
-	public var hasPrgRam:Bool = true;
-	public var hasChrRam:Bool = false;
-	public var hasSram:Bool = false;
+	@:state public var hasPrgRam:Bool = true;
+	@:state public var hasChrRam:Bool = false;
+	@:state public var hasSram:Bool = false;
 	public var sramDirty:Bool = false;
 
-	var mapperNumber:Int=0;
+	@:state var mapperNumber:Int = 0;
 
 	public function new(file:FileWrapper, ram:Memory)
 	{
@@ -75,10 +75,5 @@ class ROM implements IState
 			chr = new ByteString(chrSize);
 			chr.fillWith(0);
 		}
-	}
-
-	public function writeState(out:haxe.io.Output)
-	{
-		// TODO
 	}
 }

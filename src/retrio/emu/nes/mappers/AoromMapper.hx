@@ -6,7 +6,7 @@ import retrio.emu.nes.Mapper;
 @:build(retrio.macro.Optimizer.build())
 class AoromMapper extends Mapper
 {
-	var bank:Int = 0;
+	@:state var bank:Int = 0;
 
 	override public function onLoad()
 	{

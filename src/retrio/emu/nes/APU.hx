@@ -3,7 +3,7 @@ package retrio.emu.nes;
 import haxe.ds.Vector;
 
 
-class APU
+class APU // implements IState
 {
 	public var cpu:CPU;
 	public var ram:Memory;

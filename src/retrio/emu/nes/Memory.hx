@@ -4,15 +4,16 @@ import haxe.ds.Vector;
 import retrio.ByteString;
 
 
-class Memory
+class Memory implements IState
 {
-	public var ram:ByteString = new ByteString(0x800);
+	@:state public var ram:ByteString = new ByteString(0x800);
 	public var mapper:Mapper;
 	public var ppu:PPU;
 	public var apu:APU;
+
 	public var controllers:Vector<NESController>;
 
-	public var dmaCounter:Int = 0;
+	@:state public var dmaCounter:Int = 0;
 
 	public function new() {}
 
@@ -103,10 +104,5 @@ class Memory
 			ppu.write(4, read((i++) & 0xffff) & 0xff);
 		}
 		dmaCounter = 2;
-	}
-
-	public function writeState(out:haxe.io.Output)
-	{
-		// TODO
 	}
 }

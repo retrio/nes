@@ -9,10 +9,9 @@ class Mapper implements IState
 {
 	public static function getMapper(mapperNumber:Int):Mapper
 	{
-		// TODO: replace this with a macro
 		return switch (mapperNumber)
 		{
-			case 0: new NromMapper();
+			case 0: new Mapper();		// NROM; no special functionality
 			case 1: new MMC1Mapper();
 			case 2: new UnromMapper();
 			case 3: new CnromMapper();
@@ -28,13 +27,38 @@ class Mapper implements IState
 	public var ppu:PPU;
 
 	// nametable pointers
+	@:state var nt0a(default, set):Byte;
+	function set_nt0a(b:Byte)
+	{
+		nt0 = ppu.nameTables[b];
+		return nt0a = b;
+	}
+	@:state var nt1a(default, set):Byte;
+	function set_nt1a(b:Byte)
+	{
+		nt1 = ppu.nameTables[b];
+		return nt1a = b;
+	}
+	@:state var nt2a(default, set):Byte;
+	function set_nt2a(b:Byte)
+	{
+		nt2 = ppu.nameTables[b];
+		return nt2a = b;
+	}
+	@:state var nt3a(default, set):Byte;
+	function set_nt3a(b:Byte)
+	{
+		nt3 = ppu.nameTables[b];
+		return nt3a = b;
+	}
+
 	public var nt0:ByteString;
 	public var nt1:ByteString;
 	public var nt2:ByteString;
 	public var nt3:ByteString;
 
-	public var prgMap:Vector<Int>;
-	public var chrMap:Vector<Int>;
+	@:state public var prgMap:Vector<Int>;
+	@:state public var chrMap:Vector<Int>;
 
 	public var mirror(default, set):MirrorMode;
 	function set_mirror(m:MirrorMode)
@@ -42,39 +66,34 @@ class Mapper implements IState
 		switch(m)
 		{
 			case H_MIRROR:
-				nt0 = ppu.t0;
-				nt1 = ppu.t0;
-				nt2 = ppu.t1;
-				nt3 = ppu.t1;
-				//trace("h");
+				nt0a = 0;
+				nt1a = 0;
+				nt2a = 1;
+				nt3a = 1;
 
 			case V_MIRROR:
-				nt0 = ppu.t0;
-				nt1 = ppu.t1;
-				nt2 = ppu.t0;
-				nt3 = ppu.t1;
-				//trace("v");
+				nt0a = 0;
+				nt1a = 1;
+				nt2a = 0;
+				nt3a = 1;
 
 			case SS_MIRROR0:
-				nt0 = ppu.t0;
-				nt1 = ppu.t0;
-				nt2 = ppu.t0;
-				nt3 = ppu.t0;
-				//trace("ss0");
+				nt0a = 0;
+				nt1a = 0;
+				nt2a = 0;
+				nt3a = 0;
 
 			case SS_MIRROR1:
-				nt0 = ppu.t1;
-				nt1 = ppu.t1;
-				nt2 = ppu.t1;
-				nt3 = ppu.t1;
-				//trace("ss1");
+				nt0a = 1;
+				nt1a = 1;
+				nt2a = 1;
+				nt3a = 1;
 
 			case FOUR_SCREEN_MIRROR:
-				nt0 = ppu.t0;
-				nt1 = ppu.t1;
-				nt2 = ppu.t2;
-				nt3 = ppu.t3;
-				//trace("4s");
+				nt0a = 0;
+				nt1a = 1;
+				nt2a = 2;
+				nt3a = 3;
 		}
 		return mirror = m;
 	}
@@ -209,9 +228,4 @@ class Mapper implements IState
 	public function onReset() {}
 	public function onCpuCycle() {}
 	public function onScanline(scanline:Int) {}
-
-	public function writeState(out:haxe.io.Output)
-	{
-		// TODO
-	}
 }

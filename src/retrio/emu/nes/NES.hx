@@ -1,11 +1,14 @@
 package retrio.emu.nes;
 
 import haxe.ds.Vector;
+import haxe.io.BytesInput;
 import haxe.io.Output;
 
 
 class NES implements IEmulator implements IState
 {
+	@:stateChildren static var stateChildren = ['cpu', 'ram', 'rom', 'ppu', 'apu', 'mapper'];
+
 	public static inline var WIDTH = 256;
 	public static inline var HEIGHT = 240;
 	// minimum # of frames to wait between saves
@@ -19,17 +22,17 @@ class NES implements IEmulator implements IState
 	public var extensions:Array<String> = ["*.nes"];
 
 	// hardware components
-	public var rom:ROM;
-	public var ram:Memory;
 	public var cpu:CPU;
+	public var ram:Memory;
+	public var rom:ROM;
 	public var ppu:PPU;
 	public var apu:APU;
 	public var mapper:Mapper;
 	public var controllers:Vector<NESController> = new Vector(2);
 
 	var _saveCounter:Int = 0;
-	var romName:String;
-	var useSram:Bool = true;
+	@:state var romName:String;
+	@:state var useSram:Bool = true;
 
 	public function new() {}
 
@@ -109,6 +112,26 @@ class NES implements IEmulator implements IState
 		return Palette.getColor(c);
 	}
 
+	public function savePersistentState(slot:SaveSlot):Void
+	{
+		if (io != null)
+		{
+			var state = saveState();
+			io.writeBytesToFile(romName + ".st" + slot, state);
+		}
+	}
+
+	public function loadPersistentState(slot:SaveSlot):Void
+	{
+		if (io != null)
+		{
+			var stateFile = io.readFile(romName + ".st" + slot);
+			if (stateFile == null) throw "State " + slot + " does not exist";
+			var input = new BytesInput(stateFile.readAll());
+			loadState(input);
+		}
+	}
+
 	function saveSram()
 	{
 		if (useSram && rom.hasSram && rom.sramDirty && io != null)
@@ -131,14 +154,5 @@ class NES implements IEmulator implements IState
 				rom.sramDirty = false;
 			}
 		}
-	}
-
-	public function writeState(out:Output)
-	{
-		rom.writeState(out);
-		mapper.writeState(out);
-		ram.writeState(out);
-		cpu.writeState(out);
-		ppu.writeState(out);
 	}
 }
