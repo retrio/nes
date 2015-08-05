@@ -3,11 +3,42 @@ package retrio.emu.nes.macro;
 import haxe.macro.Expr;
 import haxe.macro.ExprTools;
 import haxe.macro.Context;
+import retrio.macro.Optimizer;
 import retrio.emu.nes.OpCode;
 
 
 class CPUOptimizer
 {
+	static var f1:Map<AddressingMode, String> = [
+		AddressingMode.Accumulator => "a",
+		AddressingMode.Immediate => "imm()",
+		AddressingMode.ZeroPage => "read(zpg())",
+		AddressingMode.ZeroPageX => "read(zpx())",
+		AddressingMode.ZeroPageY => "read(zpy())",
+		AddressingMode.Relative => "read(rel())",
+		AddressingMode.Absolute => "read(abs())",
+		AddressingMode.AbsoluteX => "read(abx())",
+		AddressingMode.AbsoluteY => "read(aby())",
+		AddressingMode.Indirect => "read(ind())",
+		AddressingMode.IndirectX => "read(inx())",
+		AddressingMode.IndirectY => "read(iny())",
+	];
+
+	static var f2:Map<AddressingMode, String> = [
+		AddressingMode.Accumulator => "a",
+		AddressingMode.Immediate => "imm()",
+		AddressingMode.ZeroPage => "zpg()",
+		AddressingMode.ZeroPageX => "zpx()",
+		AddressingMode.ZeroPageY => "zpy()",
+		AddressingMode.Relative => "rel()",
+		AddressingMode.Absolute => "abs()",
+		AddressingMode.AbsoluteX => "abx()",
+		AddressingMode.AbsoluteY => "aby()",
+		AddressingMode.Indirect => "ind()",
+		AddressingMode.IndirectX => "inx()",
+		AddressingMode.IndirectY => "iny()",
+	];
+
 	public static function build()
 	{
 		var buildFields = haxe.macro.Context.getBuildFields();
@@ -45,9 +76,6 @@ class CPUOptimizer
 				{
 					switch (expr.expr)
 					{
-						case EVars([{name: "code"}]):
-							expr.expr = EBlock([]);
-
 						case EMeta({name:"execute"}, e):
 							expr.expr = optimizeExecute(e);
 
@@ -83,15 +111,13 @@ class CPUOptimizer
 						for (byte in 0 ... 0x100)
 						{
 							var code = OpCode.getCode(byte);
+							var ticks = OpCode.getTicks(byte);
+							var mode = OpCode.getAddressingMode(byte);
+
 							if (OpCode.opCodeNames[code] == caseName)
 							{
-								// this byte represents this operation
-								var substitutedExpr = retrio.macro.Optimizer.simplify(
-									retrio.macro.Optimizer.substituteVariable(
-										inlineAddrMode(caseExpr.expr), "mode", {pos: val.pos, expr: EConst(CInt(Std.string(OpCode.getAddressingMode(byte))))}));
-
-								newCases.push({values: [{expr:EConst(CInt(Std.string(byte))), pos:val.pos}],
-									expr: substitutedExpr});
+								newCases.push({values: [{expr:EConst(CInt("0x" + StringTools.hex(byte, 2).toLowerCase())), pos:val.pos}],
+									expr: clean(clean(inlineAddrMode(caseExpr.expr, mode, ticks, OpCode.opCodeNames[code]), mode), mode)});
 							}
 						}
 					}
@@ -104,28 +130,60 @@ class CPUOptimizer
 		}
 	}
 
-	static function inlineAddrMode(e:Expr):Expr
+	static function inlineAddrMode(e:Expr, mode:AddressingMode, ticks:Int, op:String):Expr
 	{
 		switch(e.expr)
 		{
 			case EBlock(exprs):
-				var toRemove:Array<Expr> = [];
+				exprs = exprs.copy();
 
-				for (expr in exprs)
+				var i = 0;
+				while (i < exprs.length)
 				{
+					var expr = exprs[i];
 					switch (expr.expr)
 					{
 						case EBinop(OpAssign, {expr: EConst(CIdent("mode"))}, _):
-							toRemove.push(expr);
+							exprs[i] = Context.parse('trace("$op")', Context.currentPos());
+							exprs.insert(i+1, Context.parse('ticks = $ticks', Context.currentPos()));
 
 						default: {}
 					}
+					++i;
 				}
 
-				for (i in toRemove)
-					exprs.remove(i);
+				return {expr: EBlock(exprs), pos: e.pos};
+
 			default: {}
 		}
 		return e;
+	}
+
+	static function clean(e:Expr, mode:AddressingMode):Expr
+	{
+		switch(e.expr)
+		{
+			case ECall({expr: EConst(CIdent("storeValue"))}, [a, b, c]):
+				switch(mode)
+				{
+					case AddressingMode.Accumulator:
+						return {expr: EBinop(OpAssign, {expr: EConst(CIdent("a")), pos:e.pos}, {expr: EConst(CIdent("value")), pos: e.pos}), pos: e.pos};
+
+					default:
+						return {expr: ECall({expr: EConst(CIdent("write")), pos: e.pos}, [b, c]), pos:e.pos};
+				}
+
+			case ECall({expr: EConst(CIdent("getValue"))}, [{expr: EConst(CIdent("mode"))}]):
+				return Context.parse(f1[mode], e.pos);
+
+			case ECall({expr: EConst(CIdent("getAddress"))}, [{expr: EConst(CIdent("mode"))}]):
+				return Context.parse(f2[mode], e.pos);
+
+			case ECall(a, [b, {expr: EConst(CIdent("mode"))}]):
+				return {expr: ECall(a, [b]), pos: e.pos};
+
+			default:
+				return ExprTools.map(e, function(e) return clean(e, mode));
+		}
 	}
 }

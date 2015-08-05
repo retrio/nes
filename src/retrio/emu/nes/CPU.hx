@@ -3,17 +3,12 @@ package retrio.emu.nes;
 import haxe.ds.Vector;
 
 
-// the macro was a cool idea, but currently it actually hurts performance,
-// so leaving it disabled
-// might do better by inlining getAddress/getValue and using constant
-// propogation to eliminate the branching in those functions, but since I'm
-// already aggressively inlining, it might not be worth the code size increase
-//@:build(retrio.emu.nes.macro.CPUOptimizer.build())
 class CPU implements IState
 {
 	public var memory:Memory;
 	public var ppu:PPU;
 	@:state public var cycles:Int = 0;
+	@:state public var apuCycles:Int = 0;
 	@:state public var ticks:Byte = 0;
 	@:state public var cycleCount:Int = 0;
 	@:state public var nmi:Bool = false;
@@ -25,7 +20,7 @@ class CPU implements IState
 	@:state var nmiQueued:Bool = false;
 	@:state var prevNmi:Bool = false;
 	@:state var sp:Byte = 0xFD;			// stack pointer
-	@:state var accumulator:Byte = 0;	// accumulator
+	@:state var a:Byte = 0;	// a
 	@:state var x:Byte = 0;				// x register
 	@:state var y:Byte = 0;				// y register
 
@@ -114,11 +109,12 @@ class CPU implements IState
 	 */
 	public inline function runCycle()
 	{
-		//read(0x4000);
+		ticks = 0;
+
 		if (memory.dmaCounter > 0 && --memory.dmaCounter == 0)
 		{
 			// account for CPU cycles from DMA
-			cycles += 513;
+			addTicks(513);
 			ppu.catchUp();
 		}
 
@@ -141,7 +137,7 @@ class CPU implements IState
 		if (interrupt > 0 && (!id && !interruptDelay))
 		{
 			doInterrupt();
-			cycles += 7;
+			addTicks(7);
 		}
 		else if (interrupt > 0 && interruptDelay)
 		{
@@ -149,20 +145,22 @@ class CPU implements IState
 			if (!prevIntFlag)
 			{
 				doInterrupt();
-				cycles += 7;
+				addTicks(7);
 			}
 		}
 		else
 		{
 			interruptDelay = false;
 
-			var byte:Int = read(pc);
-			var code:OpCode = OpCode.getCode(byte);
+			var byte:Int = readpc();
 
 #if cputrace
+			var code:OpCode = OpCode.getCode(byte);
+			var mode:AddressingMode = OpCode.getAddressingMode(byte);
+
 			Sys.print("f" + StringTools.rpad(Std.string(ppu.frameCount), " ", 7));
 			Sys.print("c" + StringTools.rpad(Std.string(cycleCount), " ", 12));
-			Sys.print("A:" + StringTools.hex(accumulator, 2));
+			Sys.print("A:" + StringTools.hex(a, 2));
 			Sys.print(" X:" + StringTools.hex(x, 2));
 			Sys.print(" Y:" + StringTools.hex(y, 2));
 			Sys.print(" S:" + StringTools.hex(sp, 2));
@@ -179,406 +177,1533 @@ class CPU implements IState
 			Sys.print("   $" + StringTools.hex(pc, 4) + ":" + StringTools.hex(byte, 2));
 			Sys.print("        " + OpCode.opCodeNames[Std.int(code)] + " ");
 #end
-			pc = (pc + 1) & 0xffff;
-
-			// get base number of CPU cycles for this operation
-			// (in some circumstances, this may increase during execution)
-			ticks = OpCode.getTicks(byte);
 
 			var value:Int;
 
 			// execute instruction
-			@execute switch (code)
-			{
-				case ORA:					// logical or
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					accumulator |= value;
-					setFlags(accumulator);
+			switch byte {
+				case 0x01:
+					// ORA
+					ticks += 6;
+					value = read(inx());
+					ora(value);
 
-				case AND:					// logical and
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					accumulator &= value;
-					setFlags(accumulator);
+				case 0x05:
+					// ORA
+					ticks += 3;
+					value = read(zpg());
+					ora(value);
 
-				case EOR:					// exclusive or
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					accumulator = value ^ accumulator;
-					setFlags(accumulator);
+				case 0x09:
+					// ORA
+					ticks += 2;
+					value = imm();
+					ora(value);
 
-				case ADC:					// add with carry
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					setFlags(adc(value));
+				case 0x0d:
+					// ORA
+					ticks += 4;
+					value = read(abs());
+					ora(value);
 
-				case STA:					// store accumulator
-					mode = OpCode.getAddressingMode(byte);
-					address = getAddress(mode);
-					// dummy read
-					switch (mode)
-					{
-						case AddressingMode.AbsoluteX:
-							dummyRead((address - x) & 0xffff);
-						case AddressingMode.ZeroPageY, AddressingMode.IndirectY:
-							dummyRead((address - y) & 0xffff);
-						default: {}
-					}
+				case 0x11:
+					// ORA
+					ticks += 5;
+					value = read(iny());
+					ora(value);
 
-					write(address, accumulator);
+				case 0x15:
+					// ORA
+					ticks += 4;
+					value = read(zpx());
+					ora(value);
 
-				case LDA:					// load accumulator
-					mode = OpCode.getAddressingMode(byte);
-					accumulator = getValue(mode);
-					if (mode == AddressingMode.AbsoluteX && (address & 0xff00 != ((address-x) & 0xff00)))
-					{
-						// dummy read
+				case 0x19:
+					// ORA
+					ticks += 4;
+					value = read(aby());
+					ora(value);
+
+				case 0x1d:
+					// ORA
+					ticks += 4;
+					value = read(abx());
+					ora(value);
+
+				case 0x21:
+					// AND
+					ticks += 6;
+					value = read(inx());
+					and(value);
+
+				case 0x25:
+					// AND
+					ticks += 3;
+					value = read(zpg());
+					and(value);
+
+				case 0x29:
+					// AND
+					ticks += 2;
+					value = imm();
+					and(value);
+
+				case 0x2d:
+					// AND
+					ticks += 4;
+					value = read(abs());
+					and(value);
+
+				case 0x31:
+					// AND
+					ticks += 5;
+					value = read(iny());
+					and(value);
+
+				case 0x35:
+					// AND
+					ticks += 4;
+					value = read(zpx());
+					and(value);
+
+				case 0x39:
+					// AND
+					ticks += 4;
+					value = read(aby());
+					and(value);
+
+				case 0x3d:
+					// AND
+					ticks += 4;
+					value = read(abx());
+					and(value);
+
+				case 0x41:
+					// EOR
+					ticks += 6;
+					value = read(inx());
+					eor(value);
+
+				case 0x45:
+					// EOR
+					ticks += 3;
+					value = read(zpg());
+					eor(value);
+
+				case 0x49:
+					// EOR
+					ticks += 2;
+					value = imm();
+					eor(value);
+
+				case 0x4d:
+					// EOR
+					ticks += 4;
+					value = read(abs());
+					eor(value);
+
+				case 0x51:
+					// EOR
+					ticks += 5;
+					value = read(iny());
+					eor(value);
+
+				case 0x55:
+					// EOR
+					ticks += 4;
+					value = read(zpx());
+					eor(value);
+
+				case 0x59:
+					// EOR
+					ticks += 4;
+					value = read(aby());
+					eor(value);
+
+				case 0x5d:
+					// EOR
+					ticks += 4;
+					value = read(abx());
+					eor(value);
+
+				case 0x61:
+					// ADC
+					ticks += 6;
+					value = read(inx());
+					adc(value);
+
+				case 0x65:
+					// ADC
+					ticks += 3;
+					value = read(zpg());
+					adc(value);
+
+				case 0x69:
+					// ADC
+					ticks += 2;
+					value = imm();
+					adc(value);
+
+				case 0x6d:
+					// ADC
+					ticks += 4;
+					value = read(abs());
+					adc(value);
+
+				case 0x71:
+					// ADC
+					ticks += 5;
+					value = read(iny());
+					adc(value);
+
+				case 0x75:
+					// ADC
+					ticks += 4;
+					value = read(zpx());
+					adc(value);
+
+				case 0x79:
+					// ADC
+					ticks += 4;
+					value = read(aby());
+					adc(value);
+
+				case 0x7d:
+					// ADC
+					ticks += 4;
+					value = read(abx());
+					adc(value);
+
+				case 0x81:
+					// STA
+					ticks += 6;
+					var address = inx();
+					write(address, a);
+
+				case 0x85:
+					// STA
+					ticks += 3;
+					var address = zpg();
+					write(address, a);
+
+				case 0x8d:
+					// STA
+					ticks += 4;
+					var address = abs();
+					write(address, a);
+
+				case 0x91:
+					// STA
+					ticks += 6;
+					var address = iny();
+					dummyRead((address - y) & 0xffff);
+					write(address, a);
+
+				case 0x95:
+					// STA
+					ticks += 4;
+					var address = zpx();
+					write(address, a);
+
+				case 0x99:
+					// STA
+					ticks += 5;
+					var address = aby();
+					write(address, a);
+
+				case 0x9d:
+					// STA
+					ticks += 5;
+					var address = abx();
+					dummyRead((address - x) & 0xffff);
+					write(address, a);
+
+				case 0xa1:
+					// LDA
+					ticks += 6;
+					a = read(inx());
+					setFlags(a);
+
+				case 0xa5:
+					// LDA
+					ticks += 3;
+					a = read(zpg());
+					setFlags(a);
+
+				case 0xa9:
+					// LDA
+					ticks += 2;
+					a = imm();
+					setFlags(a);
+
+				case 0xad:
+					// LDA
+					ticks += 4;
+					a = read(abs());
+					setFlags(a);
+
+				case 0xb1:
+					// LDA
+					ticks += 5;
+					a = read(iny());
+					if (address & 0xff00 != ((address - y) & 0xff00)) {
 						dummyRead((address - 0x100) & 0xffff);
 					}
-					else if (mode == AddressingMode.IndirectY && (address & 0xff00 != ((address-y) & 0xff00)))
-					{
-						// dummy read
+					setFlags(a);
+
+				case 0xb5:
+					// LDA
+					ticks += 4;
+					a = read(zpx());
+					setFlags(a);
+
+				case 0xb9:
+					// LDA
+					ticks += 4;
+					a = read(aby());
+					setFlags(a);
+
+				case 0xbd:
+					// LDA
+					ticks += 4;
+					a = read(abx());
+					if (address & 0xff00 != ((address - x) & 0xff00)) {
 						dummyRead((address - 0x100) & 0xffff);
 					}
+					setFlags(a);
 
-					setFlags(accumulator);
-
-				case STX:					// store x
-					mode = OpCode.getAddressingMode(byte);
-					address = getAddress(mode);
+				case 0x86:
+					// STX
+					ticks += 3;
+					address = zpg();
 					write(address, x);
 
-				case STY:					// store y
-					mode = OpCode.getAddressingMode(byte);
-					address = getAddress(mode);
+				case 0x8e:
+					// STX
+					ticks += 4;
+					address = abs();
+					write(address, x);
+
+				case 0x96:
+					// STX
+					ticks += 4;
+					address = zpy();
+					write(address, x);
+
+				case 0x84:
+					// STY
+					ticks += 3;
+					address = zpg();
 					write(address, y);
 
-				case SEI:					// set interrupt disable
+				case 0x8c:
+					// STY
+					ticks += 4;
+					address = abs();
+					write(address, y);
+
+				case 0x94:
+					// STY
+					ticks += 4;
+					address = zpx();
+					write(address, y);
+
+				case 0x78:
 					delayInterrupt();
 					id = true;
 
-				case CLI:					// clear interrupt disable
+				case 0x58:
 					delayInterrupt();
 					id = false;
 
-				case SED:					// set decimal mode
+				case 0xf8:
 					dm = true;
 
-				case CLD:					// clear decimal mode
+				case 0xd8:
 					dm = false;
 
-				case SEC:					// set carry
+				case 0x38:
 					cf = true;
 
-				case CLC:					// clear carry
+				case 0x18:
 					cf = false;
 
-				case CLV:					// clear overflow
+				case 0xb8:
 					of = false;
 
-				case BIT:					// bit test
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					zf = value & accumulator == 0;
+				case 0x24:
+					// BIT
+					ticks += 3;
+					value = read(zpg());
+					zf = value & a == 0;
 					of = value & 0x40 != 0;
 					nf = value & 0x80 != 0;
 
-				case CMP:					// compare accumulator
-					mode = OpCode.getAddressingMode(byte);
-					cmp(accumulator, mode);
+				case 0x2c:
+					// BIT
+					ticks += 4;
+					value = read(abs());
+					zf = value & a == 0;
+					of = value & 0x40 != 0;
+					nf = value & 0x80 != 0;
 
-				case CPX:					// compare x
-					mode = OpCode.getAddressingMode(byte);
-					cmp(x, mode);
+				case 0xc1:
+					// CMP
+					ticks += 6;
+					value = read(inx());
+					cmp(a, value);
 
-				case CPY:					// compare y
-					mode = OpCode.getAddressingMode(byte);
-					cmp(y, mode);
+				case 0xc5:
+					// CMP
+					ticks += 3;
+					value = read(zpg());
+					cmp(a, value);
 
-				case SBC:					// subtract with carry
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					setFlags(sbc(value));
+				case 0xc9:
+					// CMP
+					ticks += 2;
+					value = imm();
+					cmp(a, value);
 
-				case JSR:					// jump to subroutine
-					mode = OpCode.getAddressingMode(byte);
-					address = getAddress(mode);
+				case 0xcd:
+					// CMP
+					ticks += 4;
+					value = read(abs());
+					cmp(a, value);
+
+				case 0xd1:
+					// CMP
+					ticks += 5;
+					value = read(iny());
+					cmp(a, value);
+
+				case 0xd5:
+					// CMP
+					ticks += 4;
+					value = read(zpx());
+					cmp(a, value);
+
+				case 0xd9:
+					// CMP
+					ticks += 4;
+					value = read(aby());
+					cmp(a, value);
+
+				case 0xdd:
+					// CMP
+					ticks += 4;
+					value = read(abx());
+					cmp(a, value);
+
+				case 0xe0:
+					// CPX
+					ticks += 2;
+					value = imm();
+					cmp(x, value);
+
+				case 0xe4:
+					// CPX
+					ticks += 3;
+					value = read(zpg());
+					cmp(x, value);
+
+				case 0xec:
+					// CPX
+					ticks += 4;
+					value = read(abs());
+					cmp(x, value);
+
+				case 0xc0:
+					// CPY
+					ticks += 2;
+					value = imm();
+					cmp(y, value);
+
+				case 0xc4:
+					// CPY
+					ticks += 3;
+					value = read(zpg());
+					cmp(y, value);
+
+				case 0xcc:
+					// CPY
+					ticks += 4;
+					value = read(abs());
+					cmp(y, value);
+
+				case 0xe1:
+					// SBC
+					ticks += 6;
+					value = read(inx());
+					sbc(value);
+
+				case 0xe5:
+					// SBC
+					ticks += 3;
+					value = read(zpg());
+					sbc(value);
+
+				case 0xe9:
+					// SBC
+					ticks += 2;
+					value = imm();
+					sbc(value);
+
+				case 0xeb:
+					// SBC
+					ticks += 2;
+					value = imm();
+					sbc(value);
+
+				case 0xed:
+					// SBC
+					ticks += 4;
+					value = read(abs());
+					sbc(value);
+
+				case 0xf1:
+					// SBC
+					ticks += 5;
+					value = read(iny());
+					sbc(value);
+
+				case 0xf5:
+					// SBC
+					ticks += 4;
+					value = read(zpx());
+					sbc(value);
+
+				case 0xf9:
+					// SBC
+					ticks += 4;
+					value = read(aby());
+					sbc(value);
+
+				case 0xfd:
+					// SBC
+					ticks += 4;
+					value = read(abx());
+					sbc(value);
+
+				case 0x20:
+					// JSR
+					ticks += 6;
+					value = read(abs());
 					pushStack(pc - 1 >> 8);
 					pushStack((pc - 1) & 0xff);
 					pc = address;
 
-				case RTS:					// return from subroutine
+				case 0x60:
+					// RTS
+					ticks += 6;
 					dummyRead(pc++);
 					pc = (popStack() | (popStack() << 8)) + 1;
 
-				case RTI:					// return from interrupt
+				case 0x40:
+					// RTI
+					ticks += 6;
 					dummyRead(pc++);
 					popStatus();
 					pc = popStack() | (popStack() << 8);
 
-				case ASL:					// arithmetic shift left
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					//write(address, value);
+				case 0x06:
+					// ASL
+					ticks += 5;
+					value = read(zpg());
 					cf = value & 0x80 != 0;
 					value = (value << 1) & 0xff;
-					storeValue(mode, address, value);
+					write(address, value);
 					setFlags(value);
 
-				case LSR:					// logical shift right
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					//write(address, value);
+				case 0x0a:
+					// ASL
+					ticks += 2;
+					value = a;
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					a = value;
+					setFlags(value);
+
+				case 0x0e:
+					// ASL
+					ticks += 6;
+					value = read(abs());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					setFlags(value);
+
+				case 0x16:
+					// ASL
+					ticks += 6;
+					value = read(zpx());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					setFlags(value);
+
+				case 0x1e:
+					// ASL
+					ticks += 7;
+					value = read(abx());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					setFlags(value);
+
+				case 0x46:
+					// LSR
+					ticks += 5;
+					value = read(zpg());
 					cf = value & 1 != 0;
 					value = value >> 1;
-					storeValue(mode, address, value);
+					write(address, value);
 					setFlags(value);
 
-				case ROL:					// rotate left
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
+				case 0x4a:
+					// LSR
+					ticks += 2;
+					value = a;
+					cf = value & 1 != 0;
+					value = value >> 1;
+					a = value;
+					setFlags(value);
+
+				case 0x4e:
+					// LSR
+					ticks += 6;
+					value = read(abs());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					setFlags(value);
+
+				case 0x56:
+					// LSR
+					ticks += 6;
+					value = read(zpx());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					setFlags(value);
+
+				case 0x5e:
+					// LSR
+					ticks += 7;
+					value = read(abx());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					setFlags(value);
+
+				case 0x26:
+					// ROL
+					ticks += 5;
+					value = read(zpg());
 					var new_cf = value & 0x80 != 0;
 					value = (value << 1) & 0xff;
 					value += cf ? 1 : 0;
 					cf = new_cf;
-					storeValue(mode, address, value);
+					write(address, value);
 					setFlags(value);
 
-				case ROR:					// rotate right
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					//write(ad, v);
+				case 0x2a:
+					// ROL
+					ticks += 2;
+					value = a;
+					var new_cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					cf = new_cf;
+					a = value;
+					setFlags(value);
+
+				case 0x2e:
+					// ROL
+					ticks += 6;
+					value = read(abs());
+					var new_cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					cf = new_cf;
+					write(address, value);
+					setFlags(value);
+
+				case 0x36:
+					// ROL
+					ticks += 6;
+					value = read(zpx());
+					var new_cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					cf = new_cf;
+					write(address, value);
+					setFlags(value);
+
+				case 0x3e:
+					// ROL
+					ticks += 7;
+					value = read(abx());
+					var new_cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					cf = new_cf;
+					write(address, value);
+					setFlags(value);
+
+				case 0x66:
+					// ROR
+					ticks += 5;
+					value = read(zpg());
 					var new_cf = value & 1 != 0;
 					value = (value >> 1) & 0xff;
 					value += cf ? 0x80 : 0;
 					cf = new_cf;
-					storeValue(mode, address, value);
+					write(address, value);
 					setFlags(value);
 
-				case BCC:
-					mode = OpCode.getAddressingMode(byte);
-					branch(!cf, mode);
+				case 0x6a:
+					// ROR
+					ticks += 2;
+					value = a;
+					var new_cf = value & 1 != 0;
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					cf = new_cf;
+					a = value;
+					setFlags(value);
 
-				case BCS:
-					mode = OpCode.getAddressingMode(byte);
-					branch(cf, mode);
+				case 0x6e:
+					// ROR
+					ticks += 6;
+					value = read(abs());
+					var new_cf = value & 1 != 0;
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					cf = new_cf;
+					write(address, value);
+					setFlags(value);
 
-				case BNE:
-					mode = OpCode.getAddressingMode(byte);
-					branch(!zf, mode);
+				case 0x76:
+					// ROR
+					ticks += 6;
+					value = read(zpx());
+					var new_cf = value & 1 != 0;
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					cf = new_cf;
+					write(address, value);
+					setFlags(value);
 
-				case BEQ:
-					mode = OpCode.getAddressingMode(byte);
-					branch(zf, mode);
+				case 0x7e:
+					// ROR
+					ticks += 7;
+					value = read(abx());
+					var new_cf = value & 1 != 0;
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					cf = new_cf;
+					write(address, value);
+					setFlags(value);
 
-				case BPL:
-					mode = OpCode.getAddressingMode(byte);
-					branch(!nf, mode);
+				case 0x90:
+					// BCC
+					ticks += 2;
+					branch(!cf, rel());
 
-				case BMI:
-					mode = OpCode.getAddressingMode(byte);
-					branch(nf, mode);
+				case 0xb0:
+					// BCS
+					ticks += 2;
+					branch(cf, rel());
 
-				case BVC:
-					mode = OpCode.getAddressingMode(byte);
-					branch(!of, mode);
+				case 0xd0:
+					// BNE
+					ticks += 2;
+					branch(!zf, rel());
 
-				case BVS:
-					mode = OpCode.getAddressingMode(byte);
-					branch(of, mode);
+				case 0xf0:
+					// BEQ
+					ticks += 2;
+					branch(zf, rel());
 
-				case JMP:					// jump
-					mode = OpCode.getAddressingMode(byte);
-					address = getAddress(mode);
+				case 0x10:
+					// BPL
+					ticks += 2;
+					branch(!nf, rel());
+
+				case 0x30:
+					// BMI
+					ticks += 2;
+					branch(nf, rel());
+
+				case 0x50:
+					// BVC
+					ticks += 2;
+					branch(!of, rel());
+
+				case 0x70:
+					// BVS
+					ticks += 2;
+					branch(of, rel());
+
+				case 0x4c:
+					// JMP
+					ticks += 3;
+					value = read(abs());
 					pc = address;
 
-				case LDX:					// load x
-					mode = OpCode.getAddressingMode(byte);
-					x = getValue(mode);
+				case 0x6c:
+					// JMP
+					ticks += 5;
+					value = read(ind());
+					pc = address;
+
+				case 0xa2:
+					// LDX
+					ticks += 2;
+					x = imm();
 					zf = x == 0;
 					nf = x & 0x80 == 0x80;
 
-				case LDY:					// load y
-					mode = OpCode.getAddressingMode(byte);
-					y = getValue(mode);
+				case 0xa6:
+					// LDX
+					ticks += 3;
+					x = read(zpg());
+					zf = x == 0;
+					nf = x & 0x80 == 0x80;
+
+				case 0xae:
+					// LDX
+					ticks += 4;
+					x = read(abs());
+					zf = x == 0;
+					nf = x & 0x80 == 0x80;
+
+				case 0xb6:
+					// LDX
+					ticks += 4;
+					x = read(zpy());
+					zf = x == 0;
+					nf = x & 0x80 == 0x80;
+
+				case 0xbe:
+					// LDX
+					ticks += 4;
+					x = read(aby());
+					zf = x == 0;
+					nf = x & 0x80 == 0x80;
+
+				case 0xa0:
+					// LDY
+					ticks += 2;
+					y = imm();
 					zf = y == 0;
 					nf = y & 0x80 == 0x80;
 
-				case PHA:					// push accumulator
-					pushStack(accumulator);
+				case 0xa4:
+					// LDY
+					ticks += 3;
+					y = read(zpg());
+					zf = y == 0;
+					nf = y & 0x80 == 0x80;
 
-				case PHP:					// push cpu status
+				case 0xac:
+					// LDY
+					ticks += 4;
+					y = read(abs());
+					zf = y == 0;
+					nf = y & 0x80 == 0x80;
+
+				case 0xb4:
+					// LDY
+					ticks += 4;
+					y = read(zpx());
+					zf = y == 0;
+					nf = y & 0x80 == 0x80;
+
+				case 0xbc:
+					// LDY
+					ticks += 4;
+					y = read(abx());
+					zf = y == 0;
+					nf = y & 0x80 == 0x80;
+
+				case 0x48:
+					// PHA
+					ticks += 3;
+					pushStack(a);
+
+				case 0x08:
+					// PHP
+					ticks += 3;
 					pushStatus();
 
-				case PLP:					// pull cpu status
+				case 0x28:
+					// PLP
+					ticks += 4;
 					delayInterrupt();
 					popStatus();
 
-				case PLA:					// pull accumulator
-					accumulator = popStack();
-					setFlags(accumulator);
+				case 0x68:
+					// PLA
+					ticks += 4;
+					a = popStack();
+					setFlags(a);
 
-				case INC:					// increment memory
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					//write(ad, value);
+				case 0xe6:
+					// INC
+					ticks += 5;
+					value = read(zpg());
 					value = (value + 1) & 0xff;
 					write(address, value);
 					setFlags(value);
 
-				case INX:					// increment x
+				case 0xee:
+					// INC
+					ticks += 6;
+					value = read(abs());
+					value = (value + 1) & 0xff;
+					write(address, value);
+					setFlags(value);
+
+				case 0xf6:
+					// INC
+					ticks += 6;
+					value = read(zpx());
+					value = (value + 1) & 0xff;
+					write(address, value);
+					setFlags(value);
+
+				case 0xfe:
+					// INC
+					ticks += 7;
+					value = read(abx());
+					value = (value + 1) & 0xff;
+					write(address, value);
+					setFlags(value);
+
+				case 0xe8:
+					// INX
+					ticks += 2;
 					x += 1;
 					x &= 0xff;
 					setFlags(x);
 
-				case INY:					// increment x
+				case 0xc8:
+					// INY
+					ticks += 2;
 					y += 1;
 					y &= 0xff;
 					setFlags(y);
 
-				case DEC:					// decrement memory
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
-					//write(ad, value);
+				case 0xc6:
+					// DEC
+					ticks += 5;
+					value = read(zpg());
 					value = (value - 1) & 0xff;
 					write(address, value);
 					setFlags(value);
 
-				case DEX:					// decrement x
-					setFlags(x = (x-1) & 0xff);
+				case 0xce:
+					// DEC
+					ticks += 6;
+					value = read(abs());
+					value = (value - 1) & 0xff;
+					write(address, value);
+					setFlags(value);
 
-				case DEY:					// decrement y
-					setFlags(y = (y-1) & 0xff);
+				case 0xd6:
+					// DEC
+					ticks += 6;
+					value = read(zpx());
+					value = (value - 1) & 0xff;
+					write(address, value);
+					setFlags(value);
 
-				case TAX:					// transfer accumulator to x
-					setFlags(x = accumulator);
+				case 0xde:
+					// DEC
+					ticks += 7;
+					value = read(abx());
+					value = (value - 1) & 0xff;
+					write(address, value);
+					setFlags(value);
 
-				case TAY:					// transfer accumulator to y
-					setFlags(y = accumulator);
+				case 0xca:
+					// DEX
+					ticks += 2;
+					setFlags(x = (x - 1) & 0xff);
 
-				case TSX:					// transfer stack pointer to x
+				case 0x88:
+					// DEY
+					ticks += 2;
+					setFlags(y = (y - 1) & 0xff);
+
+				case 0xaa:
+					// TAX
+					ticks += 2;
+					setFlags(x = a);
+
+				case 0xa8:
+					// TAY
+					ticks += 2;
+					setFlags(y = a);
+
+				case 0xba:
+					// TSX
+					ticks += 2;
 					setFlags(x = sp);
 
-				case TSY:					// transfer stack pointer to y
-					setFlags(y = sp);
+				case 0x98:
+					// TYA
+					ticks += 2;
+					setFlags(a = y);
 
-				case TYA:					// transfer y to accumulator
-					setFlags(accumulator = y);
-
-				case TXS:					// transfer x to stack pointer
+				case 0x9a:
+					// TXS
+					ticks += 2;
 					sp = x;
 
-				case TXA:					// transfer x to accumulator
-					setFlags(accumulator = x);
+				case 0x8a:
+					// TXA
+					ticks += 2;
+					setFlags(a = x);
 
-				case NOP: {}					// no operation
+				case 0x1a, 0x3a, 0x5a, 0x7a, 0xda, 0xea, 0xfa:
+					// NOOP
+					ticks += 2;
 
-				case IGN1:
+				case 0x04, 0x14, 0x34, 0x44, 0x54, 0x64, 0x74, 0x80,
+					0x82, 0x89, 0xc2, 0xd4, 0xe2, 0xf4:
+					// IGN1
+					ticks += 3;
 					pc += 1;
 
-				case IGN2:
+				case 0x0c, 0x1c, 0x3c, 0x5c, 0x7c, 0xdc, 0xfc:
+					// IGN2
+					ticks += 4;
 					pc += 2;
 
-				case LAX:					// LDX + TXA
-					mode = OpCode.getAddressingMode(byte);
-					x = getValue(mode);
-					setFlags(accumulator = x);
+				case 0xa3:
+					// LAX
+					ticks += 6;
+					x = read(inx());
+					setFlags(a = x);
 
-				case SAX:					// store (x & accumulator)
-					mode = OpCode.getAddressingMode(byte);
-					address = getAddress(mode);
-					write(address, x & accumulator);
+				case 0xa7:
+					// LAX
+					ticks += 3;
+					x = read(zpg());
+					setFlags(a = x);
 
-				case RLA:					// ROL then AND
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
+				case 0xab:
+					// LAX
+					ticks += 2;
+					x = imm();
+					setFlags(a = x);
+
+				case 0xaf:
+					// LAX
+					ticks += 4;
+					x = read(abs());
+					setFlags(a = x);
+
+				case 0xb3:
+					// LAX
+					ticks += 5;
+					x = read(iny());
+					setFlags(a = x);
+
+				case 0xb7:
+					// LAX
+					ticks += 4;
+					x = read(zpy());
+					setFlags(a = x);
+
+				case 0xbf:
+					// LAX
+					ticks += 4;
+					x = read(aby());
+					setFlags(a = x);
+
+				case 0x83:
+					// SAX
+					ticks += 6;
+					value = read(inx());
+					write(address, x & a);
+
+				case 0x87:
+					// SAX
+					ticks += 3;
+					value = read(zpg());
+					write(address, x & a);
+
+				case 0x8f:
+					// SAX
+					ticks += 4;
+					value = read(abs());
+					write(address, x & a);
+
+				case 0x97:
+					// SAX
+					ticks += 4;
+					value = read(zpy());
+					write(address, x & a);
+
+				case 0x23:
+					// RLA
+					ticks += 8;
+					value = read(inx());
 					value = (value << 1) & 0xff;
 					value += cf ? 1 : 0;
-
 					write(address, value);
 					cf = value & 0x80 != 0;
+					a &= value;
+					setFlags(a);
 
-					accumulator &= value;
-					setFlags(accumulator);
+				case 0x27:
+					// RLA
+					ticks += 5;
+					value = read(zpg());
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					write(address, value);
+					cf = value & 0x80 != 0;
+					a &= value;
+					setFlags(a);
 
-				case RRA:					// ROR then ADC
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
+				case 0x2f:
+					// RLA
+					ticks += 6;
+					value = read(abs());
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					write(address, value);
+					cf = value & 0x80 != 0;
+					a &= value;
+					setFlags(a);
+
+				case 0x33:
+					// RLA
+					ticks += 8;
+					value = read(iny());
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					write(address, value);
+					cf = value & 0x80 != 0;
+					a &= value;
+					setFlags(a);
+
+				case 0x37:
+					// RLA
+					ticks += 6;
+					value = read(zpx());
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					write(address, value);
+					cf = value & 0x80 != 0;
+					a &= value;
+					setFlags(a);
+
+				case 0x3b:
+					// RLA
+					ticks += 7;
+					value = read(aby());
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					write(address, value);
+					cf = value & 0x80 != 0;
+					a &= value;
+					setFlags(a);
+
+				case 0x3f:
+					// RLA
+					ticks += 7;
+					value = read(abx());
+					value = (value << 1) & 0xff;
+					value += cf ? 1 : 0;
+					write(address, value);
+					cf = value & 0x80 != 0;
+					a &= value;
+					setFlags(a);
+
+				case 0x63:
+					// RRA
+					ticks += 8;
+					value = read(inx());
 					value = (value >> 1) & 0xff;
 					value += cf ? 0x80 : 0;
-
 					write(address, value);
 					cf = value & 1 != 0;
+					adc(value);
 
-					accumulator = adc(value);
-					setFlags(accumulator);
+				case 0x67:
+					// RRA
+					ticks += 5;
+					value = read(zpg());
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					write(address, value);
+					cf = value & 1 != 0;
+					adc(value);
 
-				case SLO:					// ASL then ORA
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
+				case 0x6f:
+					// RRA
+					ticks += 6;
+					value = read(abs());
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					write(address, value);
+					cf = value & 1 != 0;
+					adc(value);
+
+				case 0x73:
+					// RRA
+					ticks += 8;
+					value = read(iny());
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					write(address, value);
+					cf = value & 1 != 0;
+					adc(value);
+
+				case 0x77:
+					// RRA
+					ticks += 6;
+					value = read(zpx());
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					write(address, value);
+					cf = value & 1 != 0;
+					adc(value);
+
+				case 0x7b:
+					// RRA
+					ticks += 7;
+					value = read(aby());
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					write(address, value);
+					cf = value & 1 != 0;
+					adc(value);
+
+				case 0x7f:
+					// RRA
+					ticks += 7;
+					value = read(abx());
+					value = (value >> 1) & 0xff;
+					value += cf ? 0x80 : 0;
+					write(address, value);
+					cf = value & 1 != 0;
+					adc(value);
+
+				case 0x03:
+					// SLO
+					ticks += 8;
+					value = read(inx());
 					cf = value & 0x80 != 0;
 					value = (value << 1) & 0xff;
 					write(address, value);
-					accumulator |= value;
-					setFlags(accumulator);
+					a |= value;
+					setFlags(a);
 
-				case SRE:					// LSR then EOR
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode);
+				case 0x07:
+					// SLO
+					ticks += 5;
+					value = read(zpg());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					a |= value;
+					setFlags(a);
+
+				case 0x0f:
+					// SLO
+					ticks += 6;
+					value = read(abs());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					a |= value;
+					setFlags(a);
+
+				case 0x13:
+					// SLO
+					ticks += 8;
+					value = read(iny());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					a |= value;
+					setFlags(a);
+
+				case 0x17:
+					// SLO
+					ticks += 6;
+					value = read(zpx());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					a |= value;
+					setFlags(a);
+
+				case 0x1b:
+					// SLO
+					ticks += 7;
+					value = read(aby());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					a |= value;
+					setFlags(a);
+
+				case 0x1f:
+					// SLO
+					ticks += 7;
+					value = read(abx());
+					cf = value & 0x80 != 0;
+					value = (value << 1) & 0xff;
+					write(address, value);
+					a |= value;
+					setFlags(a);
+
+				case 0x43:
+					// SRE
+					ticks += 8;
+					value = read(inx());
 					cf = value & 1 != 0;
 					value = value >> 1;
 					write(address, value);
-					accumulator = value ^ accumulator;
-					setFlags(accumulator);
+					a = value ^ a;
+					setFlags(a);
 
-				case DCP:					// DEC then CMP
-					mode = OpCode.getAddressingMode(byte);
-					value = getValue(mode) - 1;
+				case 0x47:
+					// SRE
+					ticks += 5;
+					value = read(zpg());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					a = value ^ a;
+					setFlags(a);
+
+				case 0x4f:
+					// SRE
+					ticks += 6;
+					value = read(abs());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					a = value ^ a;
+					setFlags(a);
+
+				case 0x53:
+					// SRE
+					ticks += 8;
+					value = read(iny());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					a = value ^ a;
+					setFlags(a);
+
+				case 0x57:
+					// SRE
+					ticks += 6;
+					value = read(zpx());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					a = value ^ a;
+					setFlags(a);
+
+				case 0x5b:
+					// SRE
+					ticks += 7;
+					value = read(aby());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					a = value ^ a;
+					setFlags(a);
+
+				case 0x5f:
+					// SRE
+					ticks += 7;
+					value = read(abx());
+					cf = value & 1 != 0;
+					value = value >> 1;
+					write(address, value);
+					a = value ^ a;
+					setFlags(a);
+
+				case 0xc3:
+					// DCP
+					ticks += 8;
+					value = read(inx()) - 1;
 					write(address, value & 0xff);
-
-					var tmp = accumulator - value;
+					var tmp = a - value;
 					if (tmp < 0) tmp += 0xff + 1;
-
-					cf = accumulator >= value;
-					zf = accumulator == value;
+					cf = a >= value;
+					zf = a == value;
 					nf = tmp & 0x80 == 0x80;
 
-				case ISC:					// INC then SBC
-					mode = OpCode.getAddressingMode(byte);
-					value = (getValue(mode) + 1) & 0xff;
-					write(address, value);
-					setFlags(sbc(value));
+				case 0xc7:
+					// DCP
+					ticks += 5;
+					value = read(zpg()) - 1;
+					write(address, value & 0xff);
+					var tmp = a - value;
+					if (tmp < 0) tmp += 0xff + 1;
+					cf = a >= value;
+					zf = a == value;
+					nf = tmp & 0x80 == 0x80;
 
-				case BRK:					// break
+				case 0xcf:
+					// DCP
+					ticks += 6;
+					value = read(abs()) - 1;
+					write(address, value & 0xff);
+					var tmp = a - value;
+					if (tmp < 0) tmp += 0xff + 1;
+					cf = a >= value;
+					zf = a == value;
+					nf = tmp & 0x80 == 0x80;
+
+				case 0xd3:
+					// DCP
+					ticks += 8;
+					value = read(iny()) - 1;
+					write(address, value & 0xff);
+					var tmp = a - value;
+					if (tmp < 0) tmp += 0xff + 1;
+					cf = a >= value;
+					zf = a == value;
+					nf = tmp & 0x80 == 0x80;
+
+				case 0xd7:
+					// DCP
+					ticks += 6;
+					value = read(zpx()) - 1;
+					write(address, value & 0xff);
+					var tmp = a - value;
+					if (tmp < 0) tmp += 0xff + 1;
+					cf = a >= value;
+					zf = a == value;
+					nf = tmp & 0x80 == 0x80;
+
+				case 0xdb:
+					// DCP
+					ticks += 7;
+					value = read(aby()) - 1;
+					write(address, value & 0xff);
+					var tmp = a - value;
+					if (tmp < 0) tmp += 0xff + 1;
+					cf = a >= value;
+					zf = a == value;
+					nf = tmp & 0x80 == 0x80;
+
+				case 0xdf:
+					// DCP
+					ticks += 7;
+					value = read(abx()) - 1;
+					write(address, value & 0xff);
+					var tmp = a - value;
+					if (tmp < 0) tmp += 0xff + 1;
+					cf = a >= value;
+					zf = a == value;
+					nf = tmp & 0x80 == 0x80;
+
+				case 0xe3:
+					// ISC
+					ticks += 8;
+					value = (read(inx()) + 1) & 0xff;
+					write(address, value);
+					sbc(value);
+
+				case 0xe7:
+					// ISC
+					ticks += 5;
+					value = (read(zpg()) + 1) & 0xff;
+					write(address, value);
+					sbc(value);
+
+				case 0xef:
+					// ISC
+					ticks += 6;
+					value = (read(abs()) + 1) & 0xff;
+					write(address, value);
+					sbc(value);
+
+				case 0xf3:
+					// ISC
+					ticks += 8;
+					value = (read(iny()) + 1) & 0xff;
+					write(address, value);
+					sbc(value);
+
+				case 0xf7:
+					// ISC
+					ticks += 6;
+					value = (read(zpx()) + 1) & 0xff;
+					write(address, value);
+					sbc(value);
+
+				case 0xfb:
+					// ISC
+					ticks += 7;
+					value = (read(aby()) + 1) & 0xff;
+					write(address, value);
+					sbc(value);
+
+				case 0xff:
+					// ISC
+					ticks += 7;
+					value = (read(abx()) + 1) & 0xff;
+					write(address, value);
+					sbc(value);
+
+				case 0x00:
+					// BRK
+					ticks += 7;
 					dummyRead(pc++);
 					breakInterrupt();
 
-				case ALR:
-					mode = OpCode.getAddressingMode(byte);
-					accumulator &= getValue(mode);
-					cf = accumulator & 1 != 0;
-					accumulator >>= 1;
-					accumulator &= 0x7f;
-					setFlags(accumulator);
+				case 0x4b:
+					// ALR
+					ticks += 2;
+					a &= imm();
+					cf = a & 1 != 0;
+					a >>= 1;
+					a &= 0x7f;
+					setFlags(a);
 
-				case ANC:
-					mode = OpCode.getAddressingMode(byte);
-					accumulator &= getValue(mode);
-					cf = nf = accumulator & 0x80 == 0x80;
-					zf = accumulator == 0;
+				case 0x0b:
+					// ANC
+					ticks += 2;
+					a &= imm();
+					cf = nf = a & 0x80 == 0x80;
+					zf = a == 0;
 
-				case ARR:
-					mode = OpCode.getAddressingMode(byte);
-					accumulator = (((getValue(mode) & accumulator) >> 1) | (cf ? 0x80 : 0x00));
-					zf = accumulator == 0;
-					nf = accumulator & 0x80 == 0x80;
-					cf = accumulator & 0x40 == 0x40;
-					of = accumulator & 0x20 == 0x20 != cf;
+				case 0x2b:
+					// ANC
+					ticks += 2;
+					a &= imm();
+					cf = nf = a & 0x80 == 0x80;
+					zf = a == 0;
 
-				case AXS:
-					mode = OpCode.getAddressingMode(byte);
-					x = (accumulator & x) - getValue(mode);
+				case 0x6b:
+					// ARR
+					ticks += 2;
+					a = (((imm() & a) >> 1) | (cf ? 0x80 : 0x00));
+					zf = a == 0;
+					nf = a & 0x80 == 0x80;
+					cf = a & 0x40 == 0x40;
+					of = a & 0x20 == 0x20 != cf;
+
+				case 0xcb:
+					// AXS
+					ticks += 2;
+					x = (a & x) - imm();
 					cf = (x >= 0);
 					setFlags(x);
 
@@ -590,10 +1715,42 @@ class CPU implements IState
 			Sys.print("\n");
 #end
 
-			cycles += ticks;
-			cycleCount += ticks;
+			tick(ticks);
 			pc &= 0xffff;
 		}
+	}
+
+	inline function ora(value:Int)
+	{
+		a |= value;
+		setFlags(a);
+	}
+
+	inline function and(value:Int)
+	{
+		a &= value;
+		setFlags(a);
+	}
+
+	inline function eor(value:Int)
+	{
+		a = value ^ a;
+		setFlags(a);
+	}
+
+	inline function addTicks(ticks:Int)
+	{
+		cycles += ticks;
+		cycleCount += ticks;
+		apuCycles += ticks;
+	}
+
+	inline function tick(ticks:Int)
+	{
+		cycles += ticks;
+		cycleCount += ticks;
+		apuCycles += ticks;
+		this.ticks -= ticks;
 	}
 
 	inline function setFlags(value:Int)
@@ -602,270 +1759,132 @@ class CPU implements IState
 		nf = value & 0x80 == 0x80;
 	}
 
-	inline function getAddress(mode:AddressingMode):Int
-	{
-		switch(mode)
-		{
-			case Immediate:
-				address = read(pc++);
-#if cputrace
-				Sys.print("#$" + StringTools.hex(address, 2));
-#end
-
-			case ZeroPage:
-				address = read(pc++);// & 0xff;
-#if cputrace
-				Sys.print("$" + StringTools.hex(address, 4));
-#end
-
-			case ZeroPageX, ZeroPageY:
-				address = read(pc++);
-#if cputrace
-				Sys.print("$" + StringTools.hex(address, 4) + "," + (mode==ZeroPageX ? "X" : "Y") + " @ ");
-#end
-				address += (mode==ZeroPageX) ? x : y;
-				address &= 0xff;
-#if cputrace
-				Sys.print("$" + StringTools.hex(address, 4));
-#end
-
-			case Relative:
-				address = getSigned(read(pc++));
-				address += pc;
-#if cputrace
-				Sys.print("$" + StringTools.hex(address, 4));
-#end
-				//address = (read(pc++) & 0xff) + pc;
-				// new page
-				if ((address & 0xff00) != (pc & 0xff00)) ticks += 1;
-
-			case Indirect:
-				address = read(pc++) | (read(pc++) << 8);
-
-				var next_addr = address + 1;
-				if (next_addr & 0xff == 0)
-				{
-					next_addr -= 0x0100;
-				}
-
-				address = (read(address) & 0xff) | (read(next_addr) << 8);
-#if cputrace
-				Sys.print("$" + StringTools.hex(address, 4));
-#end
-
-			case IndirectX:
-				address = read(pc++);
-#if cputrace
-				Sys.print("($" + StringTools.hex(address, 4) + ",X)");
-#end
-				address += x;
-				address &= 0xff;
-				address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
-#if cputrace
-				Sys.print(" @ $" + StringTools.hex(address, 4));
-#end
-
-			case IndirectY:
-				address = read(pc++);
-#if cputrace
-				Sys.print("($" + StringTools.hex(address, 4) + ")");
-#end
-				address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
-
-				// new page
-				if (ticks == 5 && address&0xff00 != (address+y)&0xff00) ticks += 1;
-
-				address += y;
-#if cputrace
-				Sys.print(",Y @ $" + StringTools.hex(address & 0xFFFF, 4));
-#end
-
-			case Absolute,
-				 AbsoluteX,
-				 AbsoluteY:
-
-				address = read(pc++) | (read(pc++) << 8);
-
-				if (mode==AddressingMode.AbsoluteX)
-				{
-					// new page
-					if (ticks==4 && (address&0xff00 != (address+x)&0xff00)) ticks += 1;
-#if cputrace
-					Sys.print("$" + StringTools.hex(address, 4) + ",X @ ");
-#end
-					address += x;
-#if cputrace
-					Sys.print(StringTools.hex(address & 0xFFFF, 4));
-#end
-				}
-				else if (mode==AddressingMode.AbsoluteY)
-				{
-					// new page
-					if (ticks==4 && (address&0xff00 != (address+y)&0xff00)) ticks += 1;
-
-#if cputrace
-					Sys.print("$" + StringTools.hex(address, 4) + ",Y @ ");
-#end
-					address += y;
-#if cputrace
-					Sys.print(StringTools.hex(address & 0xFFFF, 4));
-#end
-				}
-#if cputrace
-				else
-				{
-					Sys.print("$" + StringTools.hex(address, 4));
-				}
-#end
-
-			case Accumulator:
-				// not important; will use the value of the accumulator
-				address = 0;
-
-			default:
-				throw "Unknown addressing mode: " + mode;
-		}
-
-		return address & 0xffff;
-	}
-
 	inline function getSigned(byte:Int):Int
 	{
 		byte &= 0xff;
-
 		return (byte & 0x80 != 0) ? -((~(byte - 1)) & 0xff) : byte;
 	}
-
-	inline function getValue(mode:AddressingMode):Int
+	inline function imm()
 	{
-		var value:Int;
-		switch(mode)
-		{
-			case Immediate:
-				value = address = read(pc++);
-
-			case ZeroPage:
-				address = read(pc++);// & 0xff;
-				value = read(address);
-
-			case ZeroPageX, ZeroPageY:
-				address = read(pc++);
-				address += (mode==ZeroPageX) ? x : y;
-				address &= 0xff;
-				value = read(address);
-
-			case Relative:
-				address = getSigned(read(pc++));
-				address += pc;
-				//address = (read(pc++) & 0xff) + pc;
-				// new page
-				if ((address & 0xff00) != (pc & 0xff00)) ticks += 1;
-				value = read(address);
-
-			case Indirect:
-				address = read(pc++) | (read(pc++) << 8);
-
-				var next_addr = address + 1;
-				if (next_addr & 0xff == 0)
-				{
-					next_addr -= 0x0100;
-				}
-
-				address = (read(address) & 0xff) | (read(next_addr) << 8);
-				value = read(address);
-
-			case IndirectX:
-				address = read(pc++);
-				address += x;
-				address &= 0xff;
-				address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
-				value = read(address);
-
-			case IndirectY:
-				address = read(pc++);
-				address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
-
-				// new page
-				if (ticks == 5 && address&0xff00 != (address+y)&0xff00) ticks += 1;
-
-				address += y;
-				value = read(address);
-
-			case Absolute,
-				 AbsoluteX,
-				 AbsoluteY:
-
-				address = read(pc++) | (read(pc++) << 8);
-
-				if (mode==AddressingMode.AbsoluteX)
-				{
-					// new page
-					if (ticks==4 && (address&0xff00 != (address+x)&0xff00)) ticks += 1;
-					address += x;
-				}
-				else if (mode==AddressingMode.AbsoluteY)
-				{
-					// new page
-					if (ticks==4 && (address&0xff00 != (address+y)&0xff00)) ticks += 1;
-
-					address += y;
-				}
-				value = read(address);
-
-			case Accumulator:
-				value = accumulator;
-
-			default:
-				throw "Unknown addressing mode: " + mode;
-		}
-
-		return value;
+		return address = read(pc++);
 	}
 
-	inline function branch(cond:Bool, mode:AddressingMode):Void
+	inline function zpg()
 	{
-		address = getAddress(mode);
+		return address = read(pc++);
+	}
+
+	inline function zpx()
+	{
+		return address = (read(pc++) + x) & 0xff;
+	}
+
+	inline function zpy()
+	{
+		return address = (read(pc++) + y) & 0xff;
+	}
+
+	inline function rel()
+	{
+		address = getSigned(read(pc++));
+		address = (address + pc) & 0xffff;
+		if ((address & 0xff00) != (pc & 0xff00)) ticks += 1;
+		return address;
+	}
+
+	inline function ind()
+	{
+		address = read(pc++) | (read(pc++) << 8);
+		var next_addr = address + 1;
+		if (next_addr & 0xff == 0)
+		{
+			next_addr -= 0x0100;
+		}
+		return address = ((read(address) & 0xff) | (read(next_addr) << 8)) & 0xffff;
+	}
+
+	inline function inx()
+	{
+		address = read(pc++);
+		address += x;
+		address &= 0xff;
+		return address = ((read(address) & 0xff) | (read((address+1) & 0xff) << 8)) & 0xffff;
+	}
+
+	inline function iny()
+	{
+		address = read(pc++);
+		address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
+		// new page
+		if (ticks == 5 && address&0xff00 != (address+y)&0xff00) ticks += 1;
+		return address = (address + y) & 0xffff;
+	}
+
+	inline function abs()
+	{
+		return address = (read(pc++) | (read(pc++) << 8)) & 0xffff;
+	}
+
+	inline function abx()
+	{
+		address = read(pc++) | (read(pc++) << 8);
+		// new page
+		if (ticks==4 && (address&0xff00 != (address+x)&0xff00)) ticks += 1;
+		return address = (address + x) & 0xffff;
+	}
+
+	inline function aby()
+	{
+		address = read(pc++) | (read(pc++) << 8);
+		// new page
+		if (ticks==4 && (address&0xff00 != (address+y)&0xff00)) ticks += 1;
+		return address = (address + y) & 0xffff;
+	}
+
+	inline function branch(cond:Bool, addr:Int):Void
+	{
 		if (cond)
 		{
-			++ticks;
-			pc = address;
+			addTicks(1);
+			pc = addr;
 		}
-		else ticks = 2;
 	}
 
-	inline function cmp(val:Int, mode:AddressingMode):Void
+	inline function cmp(cmpTo:Int, value:Int):Void
 	{
-		var value = getValue(mode);
-
-		var tmp = val - value;
+		var tmp = cmpTo - value;
 		if (tmp < 0)
 			tmp += 0xff + 1;
 
-		cf = val >= value;
-		zf = val == value;
+		cf = cmpTo >= value;
+		zf = cmpTo == value;
 		nf = tmp & 0x80 == 0x80;
 	}
 
 	inline function adc(value:Int):Int
 	{
-		var tmp = value + accumulator + (cf ? 1 : 0);
+		var tmp = value + a + (cf ? 1 : 0);
 		cf = (tmp >> 8 != 0);
-		of = (((accumulator ^ value) & 0x80) == 0)
-				&& (((accumulator ^ tmp) & 0x80) != 0);
-		accumulator = tmp & 0xff;
+		of = (((a ^ value) & 0x80) == 0)
+				&& (((a ^ tmp) & 0x80) != 0);
+		a = tmp & 0xff;
 
-		return accumulator;
+		setFlags(a);
+
+		return a;
 	}
 
 	inline function sbc(value:Int):Int
 	{
-		var tmp = accumulator - value - (cf ? 0 : 1);
+		var tmp = a - value - (cf ? 0 : 1);
 		cf = (tmp >> 8 == 0);
-		of = (((accumulator ^ value) & 0x80) != 0)
-				&& (((accumulator ^ tmp) & 0x80) != 0);
-		accumulator = tmp & 0xff;
+		of = (((a ^ value) & 0x80) != 0)
+				&& (((a ^ tmp) & 0x80) != 0);
+		a = tmp & 0xff;
 
-		return accumulator;
+		setFlags(a);
+
+		return a;
 	}
 
 	inline function pushStack(value:Int)
@@ -892,18 +1911,6 @@ class CPU implements IState
 		statusFlag = popStack();
 	}
 
-	inline function storeValue(mode:AddressingMode, addr:Int, value:Int):Void
-	{
-		if (mode == AddressingMode.Accumulator)
-		{
-			accumulator = value;
-		}
-		else
-		{
-			write(addr, value);
-		}
-	}
-
 	var statusFlag(get, set):Int;
 	inline function get_statusFlag()
 	{
@@ -927,9 +1934,14 @@ class CPU implements IState
 		return val;
 	}
 
-	public inline function read(addr:Int):Int
+	inline function read(addr:Int):Int
 	{
 		return memory.read(addr & 0xffff) & 0xff;
+	}
+
+	inline function readpc()
+	{
+		return read(pc++);
 	}
 
 	inline function dummyRead(addr:Int):Void
@@ -948,7 +1960,7 @@ class CPU implements IState
 		pushStack(pc & 0xff);
 		pushStack(statusFlag);
 		pc = read(0xfffa) | (read(0xfffb) << 8);
-		cycles += 7;
+		addTicks(7);
 		id = true;
 	}
 
