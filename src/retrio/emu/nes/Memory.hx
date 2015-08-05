@@ -52,7 +52,7 @@ class Memory implements IState
 		else if (addr >= 0x4000 && addr <= 0x4018)
 		{
 			// APU registers
-			return apu.read(addr - 0x4000);
+			return apu.read(addr);
 		}
 		else
 		{
@@ -88,9 +88,9 @@ class Memory implements IState
 			for (controller in controllers)
 				if (controller != null) controller.latch();
 		}
-		else if (addr >= 0x4000 && addr <= 4018)
+		else if (addr >= 0x4000 && addr <= 0x4018)
 		{
-			apu.write(addr - 0x4000, data);
+			apu.write(addr, data);
 		}
 	}
 

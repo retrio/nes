@@ -7,10 +7,11 @@ import haxe.io.Output;
 
 class NES implements IEmulator implements IState
 {
+	@:stateVersion static var stateVersion = 1;
 	@:stateChildren static var stateChildren = ['cpu', 'ram', 'rom', 'ppu', 'apu', 'mapper'];
 
 	public static inline var WIDTH = 256;
-	public static inline var HEIGHT = 240;
+	public static inline var HEIGHT = 224;
 	// minimum # of frames to wait between saves
 	public static inline var SRAM_SAVE_FRAMES = 60;
 
@@ -67,6 +68,7 @@ class NES implements IEmulator implements IState
 
 	public function frame()
 	{
+		apu.newFrame();
 		cpu.runFrame();
 		if (rom.sramDirty)
 		{

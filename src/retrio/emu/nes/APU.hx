@@ -1,295 +1,343 @@
 package retrio.emu.nes;
 
 import haxe.ds.Vector;
+import retrio.audio.SoundBuffer;
+import retrio.audio.LowPassFilter;
+import retrio.emu.nes.sound.*;
 
 
-class APU // implements IState
+@:build(retrio.macro.Optimizer.build())
+class APU implements IState
 {
+	@:stateChildren static var stateChildren = ['pulse1', 'pulse2', 'triangle', 'noise', 'dmc'];
+
+	// currently OpenFL on native, like Flash, does not support non-44100 sample rates
+	public static inline var SAMPLE_RATE:Int = 44100;//#if flash 44100 #else 48000 #end;
+	public static inline var NATIVE_SAMPLE_RATE:Int = Std.int(341*262*60/2);
+	public static inline var NATIVE_SAMPLE_RATIO:Int = 4;
+	static inline var SEQUENCER_RATE4:Int = 14915;
+	static inline var SEQUENCER_RATE5:Int = 18641;
+	static inline var BUFFER_LENGTH:Int = 0x8000;
+	// TODO: this shouldn't be defined here
+	static inline var FRAME_RATE = 60;
+	static inline var FILTER_ORDER = #if flash 63 #else 1023 #end;
+
+	public static var lengthCounterTable:Vector<Int> = Vector.fromArrayCopy([
+		10,254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
+		12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
+	]);
+
 	public var cpu:CPU;
-	public var ram:Memory;
+	public var memory:Memory;
 
-	public var cycles:Int = 0;
+	public var buffer:SoundBuffer;		// mono output
 
-	var statusFrameInt:Bool = false;
-	var statusDmcInt:Bool = false;
-	var dmcSamplesLeft:Int = 0;
-	var lengthCtrl:Vector<Int> = new Vector(4);
-	var remainder:Int = 0;
-	var frameCtrDiv:Int = 7456;
-	var cyclesPerSample:Float = 0;
-	var linearCtr:Int = 0;
-	//var timers:Vector<Timer> = new Vector(4);
+	@:state var mode:Bool = false;		// true: 5 step, false: 4 step
 
-	public function new() {}
+	public var pulse1:Pulse;
+	public var pulse2:Pulse;
+	public var triangle:Triangle;
+	public var noise:Noise;
+	public var dmc:DMC;
 
-	public function init(cpu:CPU, ram:Memory)
+	@:state var ch1Enabled:Bool = false;
+	@:state var ch2Enabled:Bool = false;
+	@:state var ch3Enabled:Bool = false;
+	@:state var ch4Enabled:Bool = false;
+	@:state var ch5Enabled:Bool = false;
+
+	@:state var cycles:Int = 0;
+	var sampleCounter:Int = 0;
+	var sampleSync:Int = 0;
+	var samplesThisFrame:Int = 0;
+	var cycleSkip:Int = NATIVE_SAMPLE_RATIO;
+
+	// sample data for interpolation
+	var s:Float = 0;
+	var sPrev:Float = 0;
+	var t:Null<Float> = null;
+
+	var filter:LowPassFilter;
+
+	public function new()
+	{
+		buffer = new SoundBuffer(BUFFER_LENGTH);
+
+		pulse1 = new Pulse();
+		pulse2 = new Pulse();
+		pulse2.pulse2 = true;
+		triangle = new Triangle();
+		noise = new Noise();
+		dmc = new DMC();
+
+		filter = new LowPassFilter(Std.int(NATIVE_SAMPLE_RATE / NATIVE_SAMPLE_RATIO), SAMPLE_RATE, FILTER_ORDER);
+	}
+
+	public function init(cpu:CPU, memory:Memory)
 	{
 		this.cpu = cpu;
-		this.ram = ram;
-
-		for (i in 0 ... lengthCtrl.length) lengthCtrl[i] = 0;
-
-		var sampleRate = 44100;
-		cyclesPerSample = 1789773.0 / sampleRate;
+		this.memory = memory;
 	}
 
-	public function read(addr:Int):Int
+	public function newFrame()
 	{
-		//updateto(cpu.cycles);
-		return 0;
-		/*switch (addr - 0x4000)
+		samplesThisFrame -= SAMPLE_RATE;
+	}
+
+	public inline function read(addr:Int):Int
+	{
+		catchUp();
+
+		switch (addr)
 		{
-			case 0x15:
-				// channel status
-				var val = ((lengthCtrl[0] > 0) ? 1 : 0)
-						+ ((lengthCtrl[1] > 0) ? 2 : 0)
-						+ ((lengthCtrl[2] > 0) ? 4 : 0)
-						+ ((lengthCtrl[3] > 0) ? 8 : 0)
-						+ ((dmcSamplesLeft > 0) ? 16 : 0)
-						+ (statusFrameInt ? 64 : 0)
-						+ (statusDmcInt ? 128 : 0);
+			case 0x4000:
+				return pulse1.register1;
+			case 0x4001:
+				return pulse1.register2;
+			case 0x4002:
+				return pulse1.register3;
+			case 0x4003:
+				return pulse1.register4;
+			case 0x4004:
+				return pulse2.register1;
+			case 0x4005:
+				return pulse2.register2;
+			case 0x4006:
+				return pulse2.register3;
+			case 0x4007:
+				return pulse2.register4;
+			case 0x4008:
+				return triangle.register1;
+			case 0x4009:
+				return triangle.register2;
+			case 0x400a:
+				return triangle.register3;
+			case 0x400b:
+				return triangle.register4;
+			case 0x400c:
+				return noise.register1;
+			case 0x400d:
+				return noise.register2;
+			case 0x400e:
+				return noise.register3;
+			case 0x400f:
+				return noise.register4;
+			case 0x4010:
+				return 0;
+			case 0x4011:
+				return 0;
+			case 0x4012:
+				return 0;
+			case 0x4013:
+				return 0;
 
-				if (statusFrameInt)
-				{
-					--cpu.interrupt;
-					statusFrameInt = false;
-				}
-
-				return val;
+			case 0x4015:
+				return (pulse1.lengthCounter > 0 ? 0x1 : 0) |
+					(pulse2.lengthCounter > 0 ? 0x2 : 0) |
+					(triangle.lengthCounter > 0 ? 0x4 : 0) |
+					(noise.lengthCounter > 0 ? 0x8 : 0) |
+					(dmc.lengthCounter > 0 ? 0x10 : 0);
+				// TODO: I, F
+			case 0x4017:
+				return 0;
 
 			default:
-				return 0x40; //open bus
-		}*/
-	}
-
-	public function write(addr:Int, data:Int)
-	{
-		updateto(cpu.cycles - 1);
-
-		/*switch (addr - 0x4000)
-		{
-			case 0x0:
-				//length counter 1 halt
-				lenctrHalt[0] = utils.getbit(data, 5);
-				// pulse 1 duty cycle
-				timers[0].setduty(dutylookup[data >> 6]);
-				// and envelope
-				envConstVolume[0] = utils.getbit(data, 4);
-				envelopeValue[0] = data & 15;
-				//setvolumes();
-
-			case 0x1:
-				//pulse 1 sweep setup
-				//sweep enabled
-				sweepenable[0] = utils.getbit(data, 7);
-				//sweep divider period
-				sweepperiod[0] = (data >> 4) & 7;
-				//sweep negate flag
-				sweepnegate[0] = utils.getbit(data, 3);
-				//sweep shift count
-				sweepshift[0] = (data & 7);
-				sweepreload[0] = true;
-
-			case 0x2:
-				// pulse 1 timer low bit
-				timers[0].setperiod((timers[0].getperiod() & 0xfe00) + (data << 1));
-
-			case 0x3:
-				// length counter load, timer 1 high bits
-				if (lenCtrEnable[0]) {
-					lengthCtrl[0] = lenctrload[data >> 3];
-				}
-				timers[0].setperiod((timers[0].getperiod() & 0x1ff) + ((data & 7) << 9));
-				// sequencer restarted
-				timers[0].reset();
-				//envelope also restarted
-				envelopeStartFlag[0] = true;
-
-			case 0x4:
-				//length counter 2 halt
-				lenctrHalt[1] = utils.getbit(data, 5);
-				// pulse 2 duty cycle
-				timers[1].setduty(dutylookup[data >> 6]);
-				// and envelope
-				envConstVolume[1] = utils.getbit(data, 4);
-				envelopeValue[1] = data & 15;
-				//setvolumes();
-
-			case 0x5:
-				//pulse 2 sweep setup
-				//sweep enabled
-				sweepenable[1] = utils.getbit(data, 7);
-				//sweep divider period
-				sweepperiod[1] = (data >> 4) & 7;
-				//sweep negate flag
-				sweepnegate[1] = utils.getbit(data, 3);
-				//sweep shift count
-				sweepshift[1] = (data & 7);
-				sweepreload[1] = true;
-
-			case 0x6:
-				// pulse 2 timer low bit
-				timers[1].setperiod((timers[1].getperiod() & 0xfe00) + (data << 1));
-
-			case 0x7:
-				if (lenCtrEnable[1]) {
-					lengthCtrl[1] = lenctrload[data >> 3];
-				}
-				timers[1].setperiod((timers[1].getperiod() & 0x1ff) + ((data & 7) << 9));
-				// sequencer restarted
-				timers[1].reset();
-				//envelope also restarted
-				envelopeStartFlag[1] = true;
-
-			case 0x8:
-				//triangle linear counter load
-				linctrreload = data & 0x7f;
-				//and length counter halt
-				lenctrHalt[2] = utils.getbit(data, 7);
-
-			case 0xA:
-				// triangle low bits of timer
-				timers[2].setperiod((((timers[2].getperiod() * 1) & 0xff00) + data));
-
-			case 0xB:
-				// triangle length counter load
-				// and high bits of timer
-				if (lenCtrEnable[2]) {
-					lengthCtrl[2] = lenctrload[data >> 3];
-				}
-				timers[2].setperiod((((timers[2].getperiod() * 1) & 0xff) + ((data & 7) << 8)));
-				linctrflag = true;
-
-			case 0xC:
-				//noise halt and envelope
-				lenctrHalt[3] = utils.getbit(data, 5);
-				envConstVolume[3] = utils.getbit(data, 4);
-				envelopeValue[3] = data & 0xf;
-				//setvolumes();
-
-			case 0xE:
-				timers[3].setduty(utils.getbit(data, 7) ? 6 : 1);
-				timers[3].setperiod(noiseperiod[data & 15]);
-
-			case 0xF:
-				//noise length counter load, envelope restart
-				if (lenCtrEnable[3]) {
-					lengthCtrl[3] = lenctrload[data >> 3];
-				}
-				envelopeStartFlag[3] = true;
-
-			case 0x10:
-				dmcirq = utils.getbit(data, 7);
-				dmcloop = utils.getbit(data, 6);
-				dmcrate = dmcperiods[data & 0xf];
-				if (!dmcirq && statusDmcInt) {
-					--cpu.interrupt;
-					statusDmcInt = false;
-				}
-				//System.err.println(dmcirq ? "dmc irq on" : "dmc irq off");
-
-			case 0x11:
-				dmcvalue = data & 0x7f;
-
-			case 0x12:
-				dmcstartaddr = (data << 6) + 0xc000;
-
-			case 0x13:
-				dmcsamplelength = (data << 4) + 1;
-
-			case 0x14:
-				//sprite dma
-				for (int i = 0; i < 256; ++i) {
-					cpuram.write(0x2004, cpuram.read((data << 8) + i));
-				}
-				//account for time stolen from cpu
-				sprdma_count = 2;
-
-			case 0x15:
-				//status register
-				// counter enable(silence channel when bit is off)
-				for (int i = 0; i < 4; ++i) {
-					lenCtrEnable[i] = utils.getbit(data, i);
-					//THIS was the channels not cutting off bug! If you toggle a channel's
-					//status on and off very quickly then the length counter should
-					//IMMEDIATELY be forced to zero.
-					if (!lenCtrEnable[i]) {
-						lengthCtrl[i] = 0;
-					}
-				}
-				if (utils.getbit(data, 4)) {
-					if (dmcSamplesLeft == 0) {
-						restartdmc();
-					}
-				} else {
-					dmcSamplesLeft = 0;
-					dmcsilence = true;
-				}
-				if (statusDmcInt) {
-					--cpu.interrupt;
-					statusDmcInt = false;
-				}
-
-			case 0x16:
-				// latch controller 1 + 2
-				nes.getcontroller1().output(utils.getbit(data, 0));
-				nes.getcontroller2().output(utils.getbit(data, 0));
-
-			case 0x17:
-				ctrmode = utils.getbit(data, 7) ? 5 : 4;
-				//System.err.println("reset " + ctrmode + ' ' + cpu.cycles);
-				apuintflag = utils.getbit(data, 6);
-				//set is no interrupt, clear is an interrupt
-				framectr = 0;
-				frameCtrDiv = 7456 + 8;
-				if (apuintflag && statusFrameInt) {
-					statusFrameInt = false;
-					--cpu.interrupt;
-					//System.err.println("Frame interrupt off at " + cpu.cycles);
-				}
-				if (ctrmode == 5) {
-					//everything frame counter runs is clocked no matter what
-					setenvelope();
-					setlinctr();
-					setlength();
-					setsweep();
-				}
-
-			default:
-		}*/
-	}
-
-	public inline function updateto(cpuCycle:Int)
-	{
-		while (cycles < cpuCycle)
-		{
-			++remainder;
-			//clockDmc();
-			if (--frameCtrDiv <= 0)
-			{
-				frameCtrDiv = 7456;
-				//clockFrameCounter();
-			}
-			if ((cycles % cyclesPerSample) < 1)
-			{
-				//not quite right - there's a non-integer # cycles per sample.
-				//timers[0].clock(remainder);
-				//timers[1].clock(remainder);
-				if (lengthCtrl[2] > 0 && linearCtr > 0) {
-				//	timers[2].clock(remainder);
-				}
-				//timers[3].clock(remainder);
-				//var mixVol = getOutputLevel();
-				/*if (!expnSound.isEmpty())
-				{
-					for (c in expnSound) {
-						c.clock(remainder);
-					}
-				}*/
-				remainder = 0;
-				//ai.outputSample(lowpass_filter(highpass_filter(mixvol)));
-			}
-			++cycles;
+				return 0;
 		}
+	}
+
+	public function write(addr:Int, value:Int):Void
+	{
+		catchUp();
+
+		switch (addr)
+		{
+			case 0x4000:
+				pulse1.register1 = value;
+			case 0x4001:
+				pulse1.register2 = value;
+			case 0x4002:
+				pulse1.register3 = value;
+			case 0x4003:
+				pulse1.register4 = value;
+			case 0x4004:
+				pulse2.register1 = value;
+			case 0x4005:
+				pulse2.register2 = value;
+			case 0x4006:
+				pulse2.register3 = value;
+			case 0x4007:
+				pulse2.register4 = value;
+			case 0x4008:
+				triangle.register1 = value;
+			case 0x4009:
+				triangle.register2 = value;
+			case 0x400a:
+				triangle.register3 = value;
+			case 0x400b:
+				triangle.register4 = value;
+			case 0x400c:
+				noise.register1 = value;
+			case 0x400d:
+				noise.register2 = value;
+			case 0x400e:
+				noise.register3 = value;
+			case 0x400f:
+				noise.register4 = value;
+			case 0x4010:
+			case 0x4011:
+			case 0x4012:
+			case 0x4013:
+
+			case 0x4015:
+				ch1Enabled = Util.getbit(value, 0);
+				if (!ch1Enabled) pulse1.lengthCounter = 0;
+				ch2Enabled = Util.getbit(value, 1);
+				if (!ch2Enabled) pulse2.lengthCounter = 0;
+				ch3Enabled = Util.getbit(value, 2);
+				if (!ch3Enabled) triangle.lengthCounter = 0;
+				ch4Enabled = Util.getbit(value, 3);
+				if (!ch4Enabled) noise.lengthCounter = 0;
+				ch5Enabled = Util.getbit(value, 4);
+				if (!ch5Enabled) dmc.lengthCounter = 0;
+			case 0x4017:
+
+			default:
+		}
+	}
+
+	public function catchUp()
+	{
+		while (cpu.apuCycles > 1)
+		{
+			var runTo = Std.int(Math.min(predict(), Math.floor(cpu.apuCycles/2)));
+			cpu.apuCycles -= runTo * 2;
+			for (i in 0 ... runTo)
+			{
+				generateSample();
+				generateSample();
+				generateSample();
+			}
+			subCycles -= runTo * 4;
+			while (subCycles < 0)
+			{
+				runCycle();
+				subCycles += mode ? SEQUENCER_RATE5 : SEQUENCER_RATE4;
+			}
+		}
+	}
+
+	inline function predict()
+	{
+		return Std.int(Math.max(subCycles, 1));
+	}
+
+	var subCycles:Int = 0;
+	inline function runCycle()
+	{
+		if (mode)
+		{
+			// 5 step
+			switch (cycles++)
+			{
+				case 0:
+					lengthClock();
+					envelopeClock();
+				case 1:
+					envelopeClock();
+				case 2:
+					lengthClock();
+					envelopeClock();
+				case 3:
+					envelopeClock();
+				case 4: {}
+			}
+			cycles %= 5;
+		}
+		else
+		{
+			switch (cycles++)
+			{
+				case 0:
+					envelopeClock();
+				case 1:
+					lengthClock();
+					envelopeClock();
+				case 2:
+					envelopeClock();
+				case 3:
+					lengthClock();
+					envelopeClock();
+					//irq();
+			}
+			cycles %= 4;
+		}
+	}
+
+	inline function lengthClock()
+	{
+		pulse1.lengthClock();
+		pulse2.lengthClock();
+		triangle.lengthClock();
+		noise.lengthClock();
+		//dmc.lengthClock();
+	}
+
+	inline function envelopeClock()
+	{
+		pulse1.envelopeClock();
+		pulse2.envelopeClock();
+		triangle.envelopeClock();
+		noise.envelopeClock();
+		//dmc.envelopeClock();
+	}
+
+	var _samples:Vector<Int> = new Vector(4);
+	inline function generateSample()
+	{
+		if (++sampleCounter >= cycleSkip)
+		{
+			sampleCounter -= cycleSkip;
+			sampleSync += SAMPLE_RATE * NATIVE_SAMPLE_RATIO;
+
+			getSoundOut();
+			filter.addSample(s);
+
+			if (NATIVE_SAMPLE_RATE - sampleSync < SAMPLE_RATE * NATIVE_SAMPLE_RATIO)
+			{
+				if (samplesThisFrame < SAMPLE_RATE)
+				{
+					if (t == null)
+					{
+						sPrev = filter.getSample();
+						t = (NATIVE_SAMPLE_RATE - sampleSync) / (SAMPLE_RATE * NATIVE_SAMPLE_RATIO);
+					}
+					else
+					{
+						samplesThisFrame += FRAME_RATE;
+
+						buffer.push(Util.lerp(sPrev, filter.getSample(), t));
+
+						sampleSync -= NATIVE_SAMPLE_RATE;
+					}
+				}
+				else
+				{
+					sampleSync -= NATIVE_SAMPLE_RATE;
+				}
+			}
+		}
+	}
+
+	inline function getSoundOut()
+	{
+		var p1 = ch1Enabled ? pulse1.play() : 0;
+		var p2 = ch2Enabled ? pulse2.play() : 0;
+		var s1 = ch3Enabled ? triangle.play() : 0;
+		var s2 = ch4Enabled ? noise.play() : 0;
+		var s3 = ch5Enabled ? 0 : 0;//dmc.play();
+		s = 0;
+		if (p1 + p2 != 0) s += 95.88 / ((8128 / (p1 + p2)) + 100);
+		if (s1 + s2 + s3 != 0) s += 159.79 / ((1 / (s1/8227 + s2/12241 + s3/22638)) + 100);
 	}
 }

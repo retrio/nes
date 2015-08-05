@@ -471,7 +471,7 @@ abstract OpCode(Int) from Int to Int
 				// ARR
 				case 0x6B: { code=ARR; mode=AddressingMode.Immediate; ticks=2; }
 				// AXS
-				case 0xCB: { code=ANC; mode=AddressingMode.Immediate; ticks=2; }
+				case 0xCB: { code=AXS; mode=AddressingMode.Immediate; ticks=2; }
 
 				case 0xAB: { code=LAX; mode=AddressingMode.Immediate; ticks=2; }
 

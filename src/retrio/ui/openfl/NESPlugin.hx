@@ -112,8 +112,13 @@ class NESPlugin extends EmulatorPlugin
 			}
 
 			pixels.position = 0;
+
+			bmpData.lock();
+			canvas.lock();
 			bmpData.setPixels(r, pixels);
 			canvas.draw(bmpData, m);
+			canvas.unlock();
+			bmpData.unlock();
 		}
 	}
 
@@ -144,5 +149,40 @@ class NESPlugin extends EmulatorPlugin
 		var capture = new BitmapData(bmpData.width, bmpData.height - clipTop - clipBottom);
 		capture.copyPixels(bmpData, capture.rect, new flash.geom.Point());
 		return capture;
+	}
+
+	var _buffering:Bool = true;
+	override public function getSamples(e:Dynamic)
+	{
+		nes.apu.catchUp();
+
+		var l:Int;
+		if (_buffering)
+		{
+			l = Std.int(Math.max(0, 0x800 - nes.apu.buffer.length));
+			if (l <= 0) _buffering = false;
+			else l = 0x800;
+		}
+		else
+		{
+			// not enough samples; buffer until more arrive
+			l = Std.int(Math.max(0, 0x800 - nes.apu.buffer.length));
+			if (l > 0)
+			{
+				_buffering = true;
+			}
+		}
+
+		for (i in 0 ... l)
+		{
+			e.data.writeDouble(0);
+		}
+
+		var s:Float = 0;
+		for (i in l ... 0x800)
+		{
+			e.data.writeFloat(s = (Util.clamp(nes.apu.buffer.pop() * 0xf, 0, 1)));
+			e.data.writeFloat(s);
+		}
 	}
 }
