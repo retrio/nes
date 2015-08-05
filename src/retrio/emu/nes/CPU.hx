@@ -174,7 +174,7 @@ class CPU implements IState
 				+ (zf ? "Z" : "z")
 				+ (cf ? "C" : "c")
 			);
-			Sys.print("   $" + StringTools.hex(pc, 4) + ":" + StringTools.hex(byte, 2));
+			Sys.print("   $" + StringTools.hex(pc-1, 4) + ":" + StringTools.hex(byte, 2));
 			Sys.print("        " + OpCode.opCodeNames[Std.int(code)] + " ");
 #end
 
@@ -185,236 +185,204 @@ class CPU implements IState
 				case 0x01:
 					// ORA
 					ticks += 6;
-					value = read(inx());
-					ora(value);
+					ora(read(inx()));
 
 				case 0x05:
 					// ORA
 					ticks += 3;
-					value = read(zpg());
-					ora(value);
+					ora(read(zpg()));
 
 				case 0x09:
 					// ORA
 					ticks += 2;
-					value = imm();
-					ora(value);
+					ora(imm());
 
 				case 0x0d:
 					// ORA
 					ticks += 4;
-					value = read(abs());
-					ora(value);
+					ora(read(abs()));
 
 				case 0x11:
 					// ORA
 					ticks += 5;
-					value = read(iny());
-					ora(value);
+					ora(read(iny()));
 
 				case 0x15:
 					// ORA
 					ticks += 4;
-					value = read(zpx());
-					ora(value);
+					ora(read(zpx()));
 
 				case 0x19:
 					// ORA
 					ticks += 4;
-					value = read(aby());
-					ora(value);
+					ora(read(aby()));
 
 				case 0x1d:
 					// ORA
 					ticks += 4;
-					value = read(abx());
-					ora(value);
+					ora(read(abx()));
 
 				case 0x21:
 					// AND
 					ticks += 6;
-					value = read(inx());
-					and(value);
+					and(read(inx()));
 
 				case 0x25:
 					// AND
 					ticks += 3;
-					value = read(zpg());
-					and(value);
+					and(read(zpg()));
 
 				case 0x29:
 					// AND
 					ticks += 2;
-					value = imm();
-					and(value);
+					and(imm());
 
 				case 0x2d:
 					// AND
 					ticks += 4;
-					value = read(abs());
-					and(value);
+					and(read(abs()));
 
 				case 0x31:
 					// AND
 					ticks += 5;
-					value = read(iny());
-					and(value);
+					and(read(iny()));
 
 				case 0x35:
 					// AND
 					ticks += 4;
-					value = read(zpx());
-					and(value);
+					and(read(zpx()));
 
 				case 0x39:
 					// AND
 					ticks += 4;
-					value = read(aby());
-					and(value);
+					and(read(aby()));
 
 				case 0x3d:
 					// AND
 					ticks += 4;
-					value = read(abx());
-					and(value);
+					and(read(abx()));
 
 				case 0x41:
 					// EOR
 					ticks += 6;
-					value = read(inx());
-					eor(value);
+					eor(read(inx()));
 
 				case 0x45:
 					// EOR
 					ticks += 3;
-					value = read(zpg());
-					eor(value);
+					eor(read(zpg()));
 
 				case 0x49:
 					// EOR
 					ticks += 2;
-					value = imm();
-					eor(value);
+					eor(imm());
 
 				case 0x4d:
 					// EOR
 					ticks += 4;
-					value = read(abs());
-					eor(value);
+					eor(read(abs()));
 
 				case 0x51:
 					// EOR
 					ticks += 5;
-					value = read(iny());
-					eor(value);
+					eor(read(iny()));
 
 				case 0x55:
 					// EOR
 					ticks += 4;
-					value = read(zpx());
-					eor(value);
+					eor(read(zpx()));
 
 				case 0x59:
 					// EOR
 					ticks += 4;
-					value = read(aby());
-					eor(value);
+					eor(read(aby()));
 
 				case 0x5d:
 					// EOR
 					ticks += 4;
-					value = read(abx());
-					eor(value);
+					eor(read(abx()));
 
 				case 0x61:
 					// ADC
 					ticks += 6;
-					value = read(inx());
-					adc(value);
+					adc(read(inx()));
 
 				case 0x65:
 					// ADC
 					ticks += 3;
-					value = read(zpg());
-					adc(value);
+					adc(read(zpg()));
 
 				case 0x69:
 					// ADC
 					ticks += 2;
-					value = imm();
-					adc(value);
+					adc(imm());
 
 				case 0x6d:
 					// ADC
 					ticks += 4;
-					value = read(abs());
-					adc(value);
+					adc(read(abs()));
 
 				case 0x71:
 					// ADC
 					ticks += 5;
-					value = read(iny());
-					adc(value);
+					adc(read(iny()));
 
 				case 0x75:
 					// ADC
 					ticks += 4;
-					value = read(zpx());
-					adc(value);
+					adc(read(zpx()));
 
 				case 0x79:
 					// ADC
 					ticks += 4;
-					value = read(aby());
-					adc(value);
+					adc(read(aby()));
 
 				case 0x7d:
 					// ADC
 					ticks += 4;
-					value = read(abx());
-					adc(value);
+					adc(read(abx()));
 
 				case 0x81:
 					// STA
 					ticks += 6;
-					var address = inx();
+					inx();
 					write(address, a);
 
 				case 0x85:
 					// STA
 					ticks += 3;
-					var address = zpg();
+					zpg();
 					write(address, a);
 
 				case 0x8d:
 					// STA
 					ticks += 4;
-					var address = abs();
+					abs();
 					write(address, a);
 
 				case 0x91:
 					// STA
 					ticks += 6;
-					var address = iny();
+					iny();
 					dummyRead((address - y) & 0xffff);
 					write(address, a);
 
 				case 0x95:
 					// STA
 					ticks += 4;
-					var address = zpx();
+					zpx();
 					write(address, a);
 
 				case 0x99:
 					// STA
 					ticks += 5;
-					var address = aby();
+					aby();
 					write(address, a);
 
 				case 0x9d:
 					// STA
 					ticks += 5;
-					var address = abx();
+					abx();
 					dummyRead((address - x) & 0xffff);
 					write(address, a);
 
@@ -446,7 +414,8 @@ class CPU implements IState
 					// LDA
 					ticks += 5;
 					a = read(iny());
-					if (address & 0xff00 != ((address - y) & 0xff00)) {
+					if (address & 0xff00 != ((address - y) & 0xff00))
+					{
 						dummyRead((address - 0x100) & 0xffff);
 					}
 					setFlags(a);
@@ -467,7 +436,8 @@ class CPU implements IState
 					// LDA
 					ticks += 4;
 					a = read(abx());
-					if (address & 0xff00 != ((address - x) & 0xff00)) {
+					if (address & 0xff00 != ((address - x) & 0xff00))
+					{
 						dummyRead((address - 0x100) & 0xffff);
 					}
 					setFlags(a);
@@ -509,26 +479,35 @@ class CPU implements IState
 					write(address, y);
 
 				case 0x78:
+					// SEI
+					ticks += 2;
 					delayInterrupt();
 					id = true;
 
 				case 0x58:
+					// CEI
+					ticks += 2;
 					delayInterrupt();
 					id = false;
 
 				case 0xf8:
+					ticks += 2;
 					dm = true;
 
 				case 0xd8:
+					ticks += 2;
 					dm = false;
 
 				case 0x38:
+					ticks += 2;
 					cf = true;
 
 				case 0x18:
+					ticks += 2;
 					cf = false;
 
 				case 0xb8:
+					ticks += 2;
 					of = false;
 
 				case 0x24:
@@ -709,202 +688,103 @@ class CPU implements IState
 				case 0x06:
 					// ASL
 					ticks += 5;
-					value = read(zpg());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, asl(read(zpg())));
 
 				case 0x0a:
 					// ASL
 					ticks += 2;
-					value = a;
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					a = value;
-					setFlags(value);
+					a = asl(a);
 
 				case 0x0e:
 					// ASL
 					ticks += 6;
-					value = read(abs());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, asl(read(abs())));
 
 				case 0x16:
 					// ASL
 					ticks += 6;
-					value = read(zpx());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, asl(read(zpx())));
 
 				case 0x1e:
 					// ASL
 					ticks += 7;
-					value = read(abx());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, asl(read(abx())));
 
 				case 0x46:
 					// LSR
 					ticks += 5;
-					value = read(zpg());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					setFlags(value);
+					write(address, lsr(read(zpg())));
 
 				case 0x4a:
 					// LSR
 					ticks += 2;
-					value = a;
-					cf = value & 1 != 0;
-					value = value >> 1;
-					a = value;
-					setFlags(value);
+					a = lsr(a);
 
 				case 0x4e:
 					// LSR
 					ticks += 6;
-					value = read(abs());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					setFlags(value);
+					write(address, lsr(read(abs())));
 
 				case 0x56:
 					// LSR
 					ticks += 6;
-					value = read(zpx());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					setFlags(value);
+					write(address, lsr(read(zpx())));
 
 				case 0x5e:
 					// LSR
 					ticks += 7;
-					value = read(abx());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					setFlags(value);
+					write(address, lsr(read(abx())));
 
 				case 0x26:
 					// ROL
 					ticks += 5;
-					value = read(zpg());
-					var new_cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+					write(address, rol(read(zpg())));
 
 				case 0x2a:
 					// ROL
 					ticks += 2;
-					value = a;
-					var new_cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					cf = new_cf;
-					a = value;
-					setFlags(value);
+					a = rol(a);
 
 				case 0x2e:
 					// ROL
 					ticks += 6;
-					value = read(abs());
-					var new_cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+					write(address, rol(read(abs())));
 
 				case 0x36:
 					// ROL
 					ticks += 6;
-					value = read(zpx());
-					var new_cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+					write(address, rol(read(zpx())));
 
 				case 0x3e:
 					// ROL
 					ticks += 7;
-					value = read(abx());
-					var new_cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+					write(address, rol(read(abx())));
 
 				case 0x66:
 					// ROR
 					ticks += 5;
-					value = read(zpg());
-					var new_cf = value & 1 != 0;
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+					write(address, ror(read(zpg())));
 
 				case 0x6a:
 					// ROR
 					ticks += 2;
-					value = a;
-					var new_cf = value & 1 != 0;
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					cf = new_cf;
-					a = value;
-					setFlags(value);
+					a = ror(a);
 
 				case 0x6e:
 					// ROR
 					ticks += 6;
-					value = read(abs());
-					var new_cf = value & 1 != 0;
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+					write(address, ror(read(abs())));
 
 				case 0x76:
 					// ROR
 					ticks += 6;
-					value = read(zpx());
-					var new_cf = value & 1 != 0;
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+					write(address, ror(read(zpx())));
 
 				case 0x7e:
 					// ROR
 					ticks += 7;
-					value = read(abx());
-					var new_cf = value & 1 != 0;
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					cf = new_cf;
-					write(address, value);
-					setFlags(value);
+
+					write(address, ror(read(abx())));
 
 				case 0x90:
 					// BCC
@@ -1053,80 +933,54 @@ class CPU implements IState
 				case 0xe6:
 					// INC
 					ticks += 5;
-					value = read(zpg());
-					value = (value + 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, inc(read(zpg())));
 
 				case 0xee:
 					// INC
 					ticks += 6;
-					value = read(abs());
-					value = (value + 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, inc(read(abs())));
 
 				case 0xf6:
 					// INC
 					ticks += 6;
-					value = read(zpx());
-					value = (value + 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, inc(read(zpx())));
 
 				case 0xfe:
 					// INC
 					ticks += 7;
-					value = read(abx());
-					value = (value + 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, inc(read(abx())));
 
 				case 0xe8:
 					// INX
 					ticks += 2;
-					x += 1;
-					x &= 0xff;
+					x = (x + 1) & 0xff;
 					setFlags(x);
 
 				case 0xc8:
 					// INY
 					ticks += 2;
-					y += 1;
-					y &= 0xff;
+					y = (y + 1) & 0xff;
 					setFlags(y);
 
 				case 0xc6:
 					// DEC
 					ticks += 5;
-					value = read(zpg());
-					value = (value - 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, dec(read(zpg())));
 
 				case 0xce:
 					// DEC
 					ticks += 6;
-					value = read(abs());
-					value = (value - 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, dec(read(abs())));
 
 				case 0xd6:
 					// DEC
 					ticks += 6;
-					value = read(zpx());
-					value = (value - 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, dec(read(zpx())));
 
 				case 0xde:
 					// DEC
 					ticks += 7;
-					value = read(abx());
-					value = (value - 1) & 0xff;
-					write(address, value);
-					setFlags(value);
+					write(address, dec(read(abx())));
 
 				case 0xca:
 					// DEX
@@ -1252,366 +1106,178 @@ class CPU implements IState
 				case 0x23:
 					// RLA
 					ticks += 8;
-					value = read(inx());
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					write(address, value);
-					cf = value & 0x80 != 0;
-					a &= value;
-					setFlags(a);
+					write(address, rla(read(inx())));
 
 				case 0x27:
 					// RLA
 					ticks += 5;
-					value = read(zpg());
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					write(address, value);
-					cf = value & 0x80 != 0;
-					a &= value;
-					setFlags(a);
+					write(address, rla(read(zpg())));
 
 				case 0x2f:
 					// RLA
 					ticks += 6;
-					value = read(abs());
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					write(address, value);
-					cf = value & 0x80 != 0;
-					a &= value;
-					setFlags(a);
+					write(address, rla(read(abs())));
 
 				case 0x33:
 					// RLA
 					ticks += 8;
-					value = read(iny());
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					write(address, value);
-					cf = value & 0x80 != 0;
-					a &= value;
-					setFlags(a);
+					write(address, rla(read(iny())));
 
 				case 0x37:
 					// RLA
 					ticks += 6;
-					value = read(zpx());
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					write(address, value);
-					cf = value & 0x80 != 0;
-					a &= value;
-					setFlags(a);
+					write(address, rla(read(zpx())));
 
 				case 0x3b:
 					// RLA
 					ticks += 7;
-					value = read(aby());
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					write(address, value);
-					cf = value & 0x80 != 0;
-					a &= value;
-					setFlags(a);
+					write(address, rla(read(aby())));
 
 				case 0x3f:
 					// RLA
 					ticks += 7;
-					value = read(abx());
-					value = (value << 1) & 0xff;
-					value += cf ? 1 : 0;
-					write(address, value);
-					cf = value & 0x80 != 0;
-					a &= value;
-					setFlags(a);
+					write(address, rla(read(abx())));
 
 				case 0x63:
 					// RRA
 					ticks += 8;
 					value = read(inx());
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					write(address, value);
-					cf = value & 1 != 0;
-					adc(value);
+					write(address, rra(read(inx())));
 
 				case 0x67:
 					// RRA
 					ticks += 5;
-					value = read(zpg());
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					write(address, value);
-					cf = value & 1 != 0;
-					adc(value);
+					write(address, rra(read(zpg())));
 
 				case 0x6f:
 					// RRA
 					ticks += 6;
-					value = read(abs());
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					write(address, value);
-					cf = value & 1 != 0;
-					adc(value);
+					write(address, rra(read(abs())));
 
 				case 0x73:
 					// RRA
 					ticks += 8;
-					value = read(iny());
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					write(address, value);
-					cf = value & 1 != 0;
-					adc(value);
+					write(address, rra(read(iny())));
 
 				case 0x77:
 					// RRA
 					ticks += 6;
-					value = read(zpx());
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					write(address, value);
-					cf = value & 1 != 0;
-					adc(value);
+					write(address, rra(read(zpx())));
 
 				case 0x7b:
 					// RRA
 					ticks += 7;
-					value = read(aby());
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					write(address, value);
-					cf = value & 1 != 0;
-					adc(value);
+					write(address, rra(read(aby())));
 
 				case 0x7f:
 					// RRA
 					ticks += 7;
-					value = read(abx());
-					value = (value >> 1) & 0xff;
-					value += cf ? 0x80 : 0;
-					write(address, value);
-					cf = value & 1 != 0;
-					adc(value);
+					write(address, rra(read(abx())));
 
 				case 0x03:
 					// SLO
 					ticks += 8;
-					value = read(inx());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					a |= value;
-					setFlags(a);
+					write(address, slo(read(inx())));
 
 				case 0x07:
 					// SLO
 					ticks += 5;
-					value = read(zpg());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					a |= value;
-					setFlags(a);
+					write(address, slo(read(zpg())));
 
 				case 0x0f:
 					// SLO
 					ticks += 6;
-					value = read(abs());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					a |= value;
-					setFlags(a);
+					write(address, slo(read(abs())));
 
 				case 0x13:
 					// SLO
 					ticks += 8;
-					value = read(iny());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					a |= value;
-					setFlags(a);
+					write(address, slo(read(iny())));
 
 				case 0x17:
 					// SLO
 					ticks += 6;
-					value = read(zpx());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					a |= value;
-					setFlags(a);
+					write(address, slo(read(zpx())));
 
 				case 0x1b:
 					// SLO
 					ticks += 7;
-					value = read(aby());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					a |= value;
-					setFlags(a);
+					write(address, slo(read(aby())));
 
 				case 0x1f:
 					// SLO
 					ticks += 7;
-					value = read(abx());
-					cf = value & 0x80 != 0;
-					value = (value << 1) & 0xff;
-					write(address, value);
-					a |= value;
-					setFlags(a);
+					write(address, slo(read(abx())));
 
 				case 0x43:
 					// SRE
 					ticks += 8;
-					value = read(inx());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					a = value ^ a;
-					setFlags(a);
+					write(address, sre(read(inx())));
 
 				case 0x47:
 					// SRE
 					ticks += 5;
-					value = read(zpg());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					a = value ^ a;
-					setFlags(a);
+					write(address, sre(read(zpg())));
 
 				case 0x4f:
 					// SRE
 					ticks += 6;
-					value = read(abs());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					a = value ^ a;
-					setFlags(a);
+					write(address, sre(read(abs())));
 
 				case 0x53:
 					// SRE
 					ticks += 8;
-					value = read(iny());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					a = value ^ a;
-					setFlags(a);
+					write(address, sre(read(iny())));
 
 				case 0x57:
 					// SRE
 					ticks += 6;
-					value = read(zpx());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					a = value ^ a;
-					setFlags(a);
+					write(address, sre(read(zpx())));
 
 				case 0x5b:
 					// SRE
 					ticks += 7;
-					value = read(aby());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					a = value ^ a;
-					setFlags(a);
+					write(address, sre(read(aby())));
 
 				case 0x5f:
 					// SRE
 					ticks += 7;
-					value = read(abx());
-					cf = value & 1 != 0;
-					value = value >> 1;
-					write(address, value);
-					a = value ^ a;
-					setFlags(a);
+					write(address, sre(read(abx())));
 
 				case 0xc3:
 					// DCP
 					ticks += 8;
-					value = read(inx()) - 1;
-					write(address, value & 0xff);
-					var tmp = a - value;
-					if (tmp < 0) tmp += 0xff + 1;
-					cf = a >= value;
-					zf = a == value;
-					nf = tmp & 0x80 == 0x80;
+					write(address, dcp(read(inx())));
 
 				case 0xc7:
 					// DCP
 					ticks += 5;
-					value = read(zpg()) - 1;
-					write(address, value & 0xff);
-					var tmp = a - value;
-					if (tmp < 0) tmp += 0xff + 1;
-					cf = a >= value;
-					zf = a == value;
-					nf = tmp & 0x80 == 0x80;
+					write(address, dcp(read(zpg())));
 
 				case 0xcf:
 					// DCP
 					ticks += 6;
-					value = read(abs()) - 1;
-					write(address, value & 0xff);
-					var tmp = a - value;
-					if (tmp < 0) tmp += 0xff + 1;
-					cf = a >= value;
-					zf = a == value;
-					nf = tmp & 0x80 == 0x80;
+					write(address, dcp(read(abs())));
 
 				case 0xd3:
 					// DCP
 					ticks += 8;
-					value = read(iny()) - 1;
-					write(address, value & 0xff);
-					var tmp = a - value;
-					if (tmp < 0) tmp += 0xff + 1;
-					cf = a >= value;
-					zf = a == value;
-					nf = tmp & 0x80 == 0x80;
+					write(address, dcp(read(iny())));
 
 				case 0xd7:
 					// DCP
 					ticks += 6;
-					value = read(zpx()) - 1;
-					write(address, value & 0xff);
-					var tmp = a - value;
-					if (tmp < 0) tmp += 0xff + 1;
-					cf = a >= value;
-					zf = a == value;
-					nf = tmp & 0x80 == 0x80;
+					write(address, dcp(read(zpx())));
 
 				case 0xdb:
 					// DCP
 					ticks += 7;
-					value = read(aby()) - 1;
-					write(address, value & 0xff);
-					var tmp = a - value;
-					if (tmp < 0) tmp += 0xff + 1;
-					cf = a >= value;
-					zf = a == value;
-					nf = tmp & 0x80 == 0x80;
+					write(address, dcp(read(aby())));
 
 				case 0xdf:
 					// DCP
 					ticks += 7;
-					value = read(abx()) - 1;
-					write(address, value & 0xff);
-					var tmp = a - value;
-					if (tmp < 0) tmp += 0xff + 1;
-					cf = a >= value;
-					zf = a == value;
-					nf = tmp & 0x80 == 0x80;
+					write(address, dcp(read(abx())));
 
 				case 0xe3:
 					// ISC
@@ -1738,107 +1404,39 @@ class CPU implements IState
 		setFlags(a);
 	}
 
-	inline function addTicks(ticks:Int)
+	inline function asl(value:Int)
 	{
-		cycles += ticks;
-		cycleCount += ticks;
-		apuCycles += ticks;
+		cf = value & 0x80 != 0;
+		value = (value << 1) & 0xff;
+		setFlags(value);
+		return value;
 	}
 
-	inline function tick(ticks:Int)
+	inline function lsr(value:Int)
 	{
-		cycles += ticks;
-		cycleCount += ticks;
-		apuCycles += ticks;
-		this.ticks -= ticks;
+		cf = value & 1 != 0;
+		value = value >> 1;
+		setFlags(value);
+		return value;
 	}
 
-	inline function setFlags(value:Int)
+	inline function rol(value:Int)
 	{
-		zf = value == 0;
-		nf = value & 0x80 == 0x80;
+		var new_cf = value & 0x80 != 0;
+		value = ((value << 1) + (cf ? 1 : 0)) & 0xff;
+		cf = new_cf;
+		setFlags(value);
+		return value;
 	}
 
-	inline function getSigned(byte:Int):Int
+	inline function ror(value)
 	{
-		byte &= 0xff;
-		return (byte & 0x80 != 0) ? -((~(byte - 1)) & 0xff) : byte;
-	}
-	inline function imm()
-	{
-		return address = read(pc++);
-	}
-
-	inline function zpg()
-	{
-		return address = read(pc++);
-	}
-
-	inline function zpx()
-	{
-		return address = (read(pc++) + x) & 0xff;
-	}
-
-	inline function zpy()
-	{
-		return address = (read(pc++) + y) & 0xff;
-	}
-
-	inline function rel()
-	{
-		address = getSigned(read(pc++));
-		address = (address + pc) & 0xffff;
-		if ((address & 0xff00) != (pc & 0xff00)) ticks += 1;
-		return address;
-	}
-
-	inline function ind()
-	{
-		address = read(pc++) | (read(pc++) << 8);
-		var next_addr = address + 1;
-		if (next_addr & 0xff == 0)
-		{
-			next_addr -= 0x0100;
-		}
-		return address = ((read(address) & 0xff) | (read(next_addr) << 8)) & 0xffff;
-	}
-
-	inline function inx()
-	{
-		address = read(pc++);
-		address += x;
-		address &= 0xff;
-		return address = ((read(address) & 0xff) | (read((address+1) & 0xff) << 8)) & 0xffff;
-	}
-
-	inline function iny()
-	{
-		address = read(pc++);
-		address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
-		// new page
-		if (ticks == 5 && address&0xff00 != (address+y)&0xff00) ticks += 1;
-		return address = (address + y) & 0xffff;
-	}
-
-	inline function abs()
-	{
-		return address = (read(pc++) | (read(pc++) << 8)) & 0xffff;
-	}
-
-	inline function abx()
-	{
-		address = read(pc++) | (read(pc++) << 8);
-		// new page
-		if (ticks==4 && (address&0xff00 != (address+x)&0xff00)) ticks += 1;
-		return address = (address + x) & 0xffff;
-	}
-
-	inline function aby()
-	{
-		address = read(pc++) | (read(pc++) << 8);
-		// new page
-		if (ticks==4 && (address&0xff00 != (address+y)&0xff00)) ticks += 1;
-		return address = (address + y) & 0xffff;
+		var new_cf = value & 1 != 0;
+		value = (value >> 1) & 0xff;
+		value += cf ? 0x80 : 0;
+		cf = new_cf;
+		setFlags(value);
+		return value;
 	}
 
 	inline function branch(cond:Bool, addr:Int):Void
@@ -1885,6 +1483,143 @@ class CPU implements IState
 		setFlags(a);
 
 		return a;
+	}
+
+	inline function inc(value:Int)
+	{
+		value = (value + 1) & 0xff;
+		setFlags(value);
+		return value;
+	}
+
+	inline function dec(value:Int)
+	{
+		value = (value - 1) & 0xff;
+		setFlags(value);
+		return value;
+	}
+
+	inline function rla(value:Int)
+	{
+		value = ((value << 1) + (cf ? 1 : 0)) & 0xff;
+		cf = value & 0x80 != 0;
+		a &= value;
+		setFlags(a);
+		return value;
+	}
+
+	inline function rra(value:Int)
+	{
+		value = ((value >> 1) + (cf ? 0x80 : 0)) & 0xff;
+		cf = value & 1 != 0;
+		adc(value);
+		return value;
+	}
+
+	inline function slo(value:Int)
+	{
+		cf = value & 0x80 != 0;
+		value = (value << 1) & 0xff;
+		a |= value;
+		setFlags(a);
+		return value;
+	}
+
+	inline function sre(value:Int)
+	{
+		cf = value & 1 != 0;
+		value = value >> 1;
+		a = value ^ a;
+		setFlags(a);
+		return value;
+	}
+
+	inline function dcp(value:Int)
+	{
+		value = (value - 1) & 0xff;
+		var tmp = a - value;
+		if (tmp < 0) tmp += 0xff + 1;
+		cf = a >= value;
+		zf = a == value;
+		nf = tmp & 0x80 == 0x80;
+		return value;
+	}
+
+	inline function imm()
+	{
+		return address = readpc();
+	}
+
+	inline function zpg()
+	{
+		return address = readpc();
+	}
+
+	inline function zpx()
+	{
+		return address = (readpc() + x) & 0xff;
+	}
+
+	inline function zpy()
+	{
+		return address = (readpc() + y) & 0xff;
+	}
+
+	inline function rel()
+	{
+		address = getSigned(readpc());
+		address = (address + pc) & 0xffff;
+		if ((address & 0xff00) != (pc & 0xff00)) ticks += 1;
+		return address;
+	}
+
+	inline function ind()
+	{
+		address = readpc() | (readpc() << 8);
+		var next_addr = address + 1;
+		if (next_addr & 0xff == 0)
+		{
+			next_addr -= 0x0100;
+		}
+		return address = ((read(address) & 0xff) | (read(next_addr) << 8)) & 0xffff;
+	}
+
+	inline function inx()
+	{
+		address = readpc();
+		address += x;
+		address &= 0xff;
+		return address = ((read(address) & 0xff) | (read((address+1) & 0xff) << 8)) & 0xffff;
+	}
+
+	inline function iny()
+	{
+		address = readpc();
+		address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
+		// new page
+		if (ticks == 5 && address&0xff00 != (address+y)&0xff00) ticks += 1;
+		return address = (address + y) & 0xffff;
+	}
+
+	inline function abs()
+	{
+		return address = (readpc() | (readpc() << 8)) & 0xffff;
+	}
+
+	inline function abx()
+	{
+		address = readpc() | (readpc() << 8);
+		// new page
+		if (ticks==4 && (address&0xff00 != (address+x)&0xff00)) ticks += 1;
+		return address = (address + x) & 0xffff;
+	}
+
+	inline function aby()
+	{
+		address = readpc() | (readpc() << 8);
+		// new page
+		if (ticks==4 && (address&0xff00 != (address+y)&0xff00)) ticks += 1;
+		return address = (address + y) & 0xffff;
 	}
 
 	inline function pushStack(value:Int)
@@ -1936,6 +1671,7 @@ class CPU implements IState
 
 	inline function read(addr:Int):Int
 	{
+		//tick(1);
 		return memory.read(addr & 0xffff) & 0xff;
 	}
 
@@ -1951,6 +1687,7 @@ class CPU implements IState
 
 	public inline function write(addr:Int, data:Int):Void
 	{
+		//tick(1);
 		memory.write(addr & 0xffff, data & 0xff);
 	}
 
@@ -1987,5 +1724,32 @@ class CPU implements IState
 	{
 		interruptDelay = true;
 		prevIntFlag = id;
+	}
+
+	inline function addTicks(ticks:Int)
+	{
+		cycles += ticks;
+		cycleCount += ticks;
+		apuCycles += ticks;
+	}
+
+	inline function tick(ticks:Int)
+	{
+		cycles += ticks;
+		cycleCount += ticks;
+		apuCycles += ticks;
+		this.ticks -= ticks;
+	}
+
+	inline function setFlags(value:Int)
+	{
+		zf = value == 0;
+		nf = value & 0x80 == 0x80;
+	}
+
+	inline function getSigned(byte:Int):Int
+	{
+		byte &= 0xff;
+		return (byte & 0x80 != 0) ? -((~(byte - 1)) & 0xff) : byte;
 	}
 }
