@@ -364,7 +364,7 @@ class CPU implements IState
 					// STA
 					ticks += 6;
 					iny();
-					dummyRead((address - y) & 0xffff);
+					dummyRead(((address - y) & 0xff00) | (address & 0xff));
 					write(address, a);
 
 				case 0x95:
@@ -383,7 +383,7 @@ class CPU implements IState
 					// STA
 					ticks += 5;
 					abx();
-					dummyRead((address - x) & 0xffff);
+					dummyRead(((address - x) & 0xff00) | (address & 0xff));
 					write(address, a);
 
 				case 0xa1:
@@ -413,11 +413,12 @@ class CPU implements IState
 				case 0xb1:
 					// LDA
 					ticks += 5;
-					a = read(iny());
+					iny();
 					if (address & 0xff00 != ((address - y) & 0xff00))
 					{
-						dummyRead((address - 0x100) & 0xffff);
+						dummyRead(((address - y) & 0xff00) | (address & 0xff));
 					}
+					a = read(address);
 					setFlags(a);
 
 				case 0xb5:
@@ -435,11 +436,12 @@ class CPU implements IState
 				case 0xbd:
 					// LDA
 					ticks += 4;
-					a = read(abx());
+					abx();
 					if (address & 0xff00 != ((address - x) & 0xff00))
 					{
-						dummyRead((address - 0x100) & 0xffff);
+						dummyRead(((address - x) & 0xff00) | (address & 0xff));
 					}
+					a = read(address);
 					setFlags(a);
 
 				case 0x86:
@@ -758,7 +760,9 @@ class CPU implements IState
 				case 0x3e:
 					// ROL
 					ticks += 7;
-					write(address, rol(read(abx())));
+					abx();
+					dummyRead(((address - x) & 0xff00) | (address & 0xff));
+					write(address, rol(read(address)));
 
 				case 0x66:
 					// ROR
@@ -789,42 +793,42 @@ class CPU implements IState
 				case 0x90:
 					// BCC
 					ticks += 2;
-					branch(!cf, rel());
+					branch(!cf);
 
 				case 0xb0:
 					// BCS
 					ticks += 2;
-					branch(cf, rel());
+					branch(cf);
 
 				case 0xd0:
 					// BNE
 					ticks += 2;
-					branch(!zf, rel());
+					branch(!zf);
 
 				case 0xf0:
 					// BEQ
 					ticks += 2;
-					branch(zf, rel());
+					branch(zf);
 
 				case 0x10:
 					// BPL
 					ticks += 2;
-					branch(!nf, rel());
+					branch(!nf);
 
 				case 0x30:
 					// BMI
 					ticks += 2;
-					branch(nf, rel());
+					branch(nf);
 
 				case 0x50:
 					// BVC
 					ticks += 2;
-					branch(!of, rel());
+					branch(!of);
 
 				case 0x70:
 					// BVS
 					ticks += 2;
-					branch(of, rel());
+					branch(of);
 
 				case 0x4c:
 					// JMP
@@ -1373,6 +1377,50 @@ class CPU implements IState
 					cf = (x >= 0);
 					setFlags(x);
 
+				case 0x9c:
+					// SYA
+					ticks += 5;
+					abs();
+					value = (y & ((address >> 8) + 1)) & 0xff;
+					var tmp = (address - x) & 0xff;
+					if (x + tmp <= 0xff)
+					{
+						write(address, value);
+					}
+					else
+					{
+						write(address, read(address));
+					}
+
+				case 0x9e:
+					// SXA
+					ticks += 5;
+					abs();
+					value = (x & ((address >> 8) + 1)) & 0xff;
+					var tmp = (address - y) & 0xff;
+					if (y + tmp <= 0xff)
+					{
+						write(address, value);
+					}
+					else
+					{
+						write(address, read(address));
+					}
+
+				case 0x93:
+					// AHX
+					ticks += 6;
+					ahx(iny());
+
+				case 0x9f:
+					// AHX
+					ticks += 5;
+					ahx(aby());
+
+				case 0x02, 0x12, 0x22, 0x32, 0x42, 0x52, 0x62, 0x72,
+					0x92, 0xb2, 0xd2, 0xf2:
+					// KIL
+
 				default:
 					throw "Invalid instruction: $" + StringTools.hex(byte);
 			}
@@ -1439,12 +1487,16 @@ class CPU implements IState
 		return value;
 	}
 
-	inline function branch(cond:Bool, addr:Int):Void
+	inline function branch(cond:Bool):Void
 	{
 		if (cond)
 		{
 			addTicks(1);
-			pc = addr;
+			pc = rel();
+		}
+		else
+		{
+			++pc;
 		}
 	}
 
@@ -1501,17 +1553,14 @@ class CPU implements IState
 
 	inline function rla(value:Int)
 	{
-		value = ((value << 1) + (cf ? 1 : 0)) & 0xff;
-		cf = value & 0x80 != 0;
-		a &= value;
-		setFlags(a);
+		value = rol(value);
+		and(value);
 		return value;
 	}
 
 	inline function rra(value:Int)
 	{
-		value = ((value >> 1) + (cf ? 0x80 : 0)) & 0xff;
-		cf = value & 1 != 0;
+		value = ror(value);
 		adc(value);
 		return value;
 	}
@@ -1543,6 +1592,20 @@ class CPU implements IState
 		zf = a == value;
 		nf = tmp & 0x80 == 0x80;
 		return value;
+	}
+
+	inline function ahx(addr:Int)
+	{
+		var value = (a & x & ((addr >> 8) + 1)) & 0xff;
+		var tmp = (addr - y) & 0xff;
+		if (y + tmp <= 0xff)
+		{
+			write(addr, value);
+		}
+		else
+		{
+			write(addr, read(address));
+		}
 	}
 
 	inline function imm()
