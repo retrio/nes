@@ -205,7 +205,7 @@ class CPU implements IState
 				case 0x11:
 					// ORA
 					ticks += 5;
-					ora(read(iny()));
+					ora(read(inyPb()));
 
 				case 0x15:
 					// ORA
@@ -215,12 +215,12 @@ class CPU implements IState
 				case 0x19:
 					// ORA
 					ticks += 4;
-					ora(read(aby()));
+					ora(read(abyPb()));
 
 				case 0x1d:
 					// ORA
 					ticks += 4;
-					ora(read(abx()));
+					ora(read(abxPb()));
 
 				case 0x21:
 					// AND
@@ -245,7 +245,7 @@ class CPU implements IState
 				case 0x31:
 					// AND
 					ticks += 5;
-					and(read(iny()));
+					and(read(inyPb()));
 
 				case 0x35:
 					// AND
@@ -255,12 +255,12 @@ class CPU implements IState
 				case 0x39:
 					// AND
 					ticks += 4;
-					and(read(aby()));
+					and(read(abyPb()));
 
 				case 0x3d:
 					// AND
 					ticks += 4;
-					and(read(abx()));
+					and(read(abxPb()));
 
 				case 0x41:
 					// EOR
@@ -285,7 +285,7 @@ class CPU implements IState
 				case 0x51:
 					// EOR
 					ticks += 5;
-					eor(read(iny()));
+					eor(read(inyPb()));
 
 				case 0x55:
 					// EOR
@@ -295,12 +295,12 @@ class CPU implements IState
 				case 0x59:
 					// EOR
 					ticks += 4;
-					eor(read(aby()));
+					eor(read(abyPb()));
 
 				case 0x5d:
 					// EOR
 					ticks += 4;
-					eor(read(abx()));
+					eor(read(abxPb()));
 
 				case 0x61:
 					// ADC
@@ -325,7 +325,7 @@ class CPU implements IState
 				case 0x71:
 					// ADC
 					ticks += 5;
-					adc(read(iny()));
+					adc(read(inyPb()));
 
 				case 0x75:
 					// ADC
@@ -335,12 +335,12 @@ class CPU implements IState
 				case 0x79:
 					// ADC
 					ticks += 4;
-					adc(read(aby()));
+					adc(read(abyPb()));
 
 				case 0x7d:
 					// ADC
 					ticks += 4;
-					adc(read(abx()));
+					adc(read(abxPb()));
 
 				case 0x81:
 					// STA
@@ -413,7 +413,7 @@ class CPU implements IState
 				case 0xb1:
 					// LDA
 					ticks += 5;
-					iny();
+					inyPb();
 					if (address & 0xff00 != ((address - y) & 0xff00))
 					{
 						dummyRead(((address - y) & 0xff00) | (address & 0xff));
@@ -430,13 +430,13 @@ class CPU implements IState
 				case 0xb9:
 					// LDA
 					ticks += 4;
-					a = read(aby());
+					a = read(abyPb());
 					setFlags(a);
 
 				case 0xbd:
 					// LDA
 					ticks += 4;
-					abx();
+					abxPb();
 					if (address & 0xff00 != ((address - x) & 0xff00))
 					{
 						dummyRead(((address - x) & 0xff00) | (address & 0xff));
@@ -555,7 +555,7 @@ class CPU implements IState
 				case 0xd1:
 					// CMP
 					ticks += 5;
-					value = read(iny());
+					value = read(inyPb());
 					cmp(a, value);
 
 				case 0xd5:
@@ -567,13 +567,13 @@ class CPU implements IState
 				case 0xd9:
 					// CMP
 					ticks += 4;
-					value = read(aby());
+					value = read(abyPb());
 					cmp(a, value);
 
 				case 0xdd:
 					// CMP
 					ticks += 4;
-					value = read(abx());
+					value = read(abxPb());
 					cmp(a, value);
 
 				case 0xe0:
@@ -645,7 +645,7 @@ class CPU implements IState
 				case 0xf1:
 					// SBC
 					ticks += 5;
-					value = read(iny());
+					value = read(inyPb());
 					sbc(value);
 
 				case 0xf5:
@@ -657,13 +657,13 @@ class CPU implements IState
 				case 0xf9:
 					// SBC
 					ticks += 4;
-					value = read(aby());
+					value = read(abyPb());
 					sbc(value);
 
 				case 0xfd:
 					// SBC
 					ticks += 4;
-					value = read(abx());
+					value = read(abxPb());
 					sbc(value);
 
 				case 0x20:
@@ -873,7 +873,7 @@ class CPU implements IState
 				case 0xbe:
 					// LDX
 					ticks += 4;
-					x = read(aby());
+					x = read(abyPb());
 					zf = x == 0;
 					nf = x & 0x80 == 0x80;
 
@@ -908,7 +908,7 @@ class CPU implements IState
 				case 0xbc:
 					// LDY
 					ticks += 4;
-					y = read(abx());
+					y = read(abxPb());
 					zf = y == 0;
 					nf = y & 0x80 == 0x80;
 
@@ -1068,7 +1068,7 @@ class CPU implements IState
 				case 0xb3:
 					// LAX
 					ticks += 5;
-					x = read(iny());
+					x = read(inyPb());
 					setFlags(a = x);
 
 				case 0xb7:
@@ -1080,7 +1080,7 @@ class CPU implements IState
 				case 0xbf:
 					// LAX
 					ticks += 4;
-					x = read(aby());
+					x = read(abyPb());
 					setFlags(a = x);
 
 				case 0x83:
@@ -1658,9 +1658,15 @@ class CPU implements IState
 	inline function iny()
 	{
 		address = readpc();
+		return address = (((read(address) & 0xff) | (read((address+1) & 0xff) << 8)) + y) & 0xffff;
+	}
+
+	inline function inyPb()
+	{
+		address = readpc();
 		address = (read(address) & 0xff) | (read((address+1) & 0xff) << 8);
 		// new page
-		if (ticks == 5 && address&0xff00 != (address+y)&0xff00) ticks += 1;
+		if (address&0xff00 != (address+y)&0xff00) ticks += 1;
 		return address = (address + y) & 0xffff;
 	}
 
@@ -1671,17 +1677,27 @@ class CPU implements IState
 
 	inline function abx()
 	{
+		return address = ((readpc() | (readpc() << 8)) + x) & 0xffff;
+	}
+
+	inline function abxPb()
+	{
 		address = readpc() | (readpc() << 8);
 		// new page
-		if (ticks==4 && (address&0xff00 != (address+x)&0xff00)) ticks += 1;
+		if (address&0xff00 != (address+x)&0xff00) ticks += 1;
 		return address = (address + x) & 0xffff;
 	}
 
 	inline function aby()
 	{
+		return address = ((readpc() | (readpc() << 8)) + y) & 0xffff;
+	}
+
+	inline function abyPb()
+	{
 		address = readpc() | (readpc() << 8);
 		// new page
-		if (ticks==4 && (address&0xff00 != (address+y)&0xff00)) ticks += 1;
+		if (address&0xff00 != (address+y)&0xff00) ticks += 1;
 		return address = (address + y) & 0xffff;
 	}
 
@@ -1734,7 +1750,7 @@ class CPU implements IState
 
 	inline function read(addr:Int):Int
 	{
-		//tick(1);
+		tick(1);
 		return memory.read(addr & 0xffff) & 0xff;
 	}
 
@@ -1748,9 +1764,9 @@ class CPU implements IState
 		read(addr);
 	}
 
-	public inline function write(addr:Int, data:Int):Void
+	inline function write(addr:Int, data:Int):Void
 	{
-		//tick(1);
+		tick(1);
 		memory.write(addr & 0xffff, data & 0xff);
 	}
 
@@ -1792,15 +1808,15 @@ class CPU implements IState
 	inline function addTicks(ticks:Int)
 	{
 		cycles += ticks;
-		cycleCount += ticks;
 		apuCycles += ticks;
+		cycleCount += ticks;
 	}
 
 	inline function tick(ticks:Int)
 	{
 		cycles += ticks;
-		cycleCount += ticks;
 		apuCycles += ticks;
+		cycleCount += ticks;
 		this.ticks -= ticks;
 	}
 
