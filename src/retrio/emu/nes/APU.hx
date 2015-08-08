@@ -18,8 +18,6 @@ class APU implements IState
 	static inline var SEQUENCER_RATE4:Int = 14915;
 	static inline var SEQUENCER_RATE5:Int = 18641;
 	static inline var BUFFER_LENGTH:Int = 0x8000;
-	// TODO: this shouldn't be defined here
-	static inline var FRAME_RATE = 60;
 	static inline var FILTER_ORDER = #if flash 63 #else 1023 #end;
 
 	public static var lengthCounterTable:Vector<Int> = Vector.fromArrayCopy([
@@ -31,6 +29,8 @@ class APU implements IState
 	public var memory:Memory;
 
 	public var buffer:SoundBuffer;		// mono output
+
+	public var frameRate:Int = 60;
 
 	@:state var mode:Bool = false;		// true: 5 step, false: 4 step
 
@@ -79,8 +79,9 @@ class APU implements IState
 		this.memory = memory;
 	}
 
-	public function newFrame()
+	public function newFrame(frameRate:Int)
 	{
+		this.frameRate = frameRate;
 		samplesThisFrame -= SAMPLE_RATE;
 	}
 
@@ -314,7 +315,7 @@ class APU implements IState
 					}
 					else
 					{
-						samplesThisFrame += FRAME_RATE;
+						samplesThisFrame += frameRate;
 
 						buffer.push(Util.lerp(sPrev, filter.getSample(), t));
 

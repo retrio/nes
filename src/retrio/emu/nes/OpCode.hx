@@ -82,6 +82,7 @@ abstract OpCode(Int) from Int to Int
 	var ANC = 0x69;		// AND, copy N to C
 	var ARR = 0x70;		// AND then ROR
 	var AXS = 0x71;		// set X to (acc AND X) - (value w/o borrow)
+	var SHY = 0x72;
 
 	var UNKNOWN = 0x0;
 
@@ -474,6 +475,7 @@ abstract OpCode(Int) from Int to Int
 				case 0xCB: { code=AXS; mode=AddressingMode.Immediate; ticks=2; }
 
 				case 0xAB: { code=LAX; mode=AddressingMode.Immediate; ticks=2; }
+				case 0x9C: { code=SHY; mode=AddressingMode.Absolute; ticks=5; }
 
 				default: code=UNKNOWN;
 			}

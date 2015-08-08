@@ -1,10 +1,23 @@
 <tests dir="assets/roms/test/">
 	<!-- CPU tests -->
-	<test rom="official_only.nes" hash="67e977e2e2820cc141f47712c90742833797097b"/>
-	<test rom="all_instrs.nes"/>
+	<test rom="01-implied.nes" hash="e3cbb96f180eba8366f452e76bbf29a1abe0c736"/>
+	<test rom="02-immediate.nes" hash="87f843080db20b06b8162b45015bad16c904afaf"/>
+	<test rom="03-zero_page.nes" hash="4d9ee48bf9080c011fec4cbbbb1915f2dc755b49"/>
+	<test rom="04-zp_xy.nes" hash="7b75c8a0aaa94e92c7e52081f998ca39b86a22e4"/>
+	<test rom="05-absolute.nes" hash="ce0715c646d1f450f69fca68c3df2066dbfd0a90"/>
+	<test rom="06-abs_xy.nes"/>
+	<test rom="07-ind_x.nes"/>
+	<test rom="08-ind_y.nes" hash="9f04b874ea32ab94935b0608d2ace4e9a1fb562c"/>
+	<test rom="09-branches.nes" hash="627ad40d4a911132f2107b20246fad4bf12f5c20"/>
+	<test rom="10-stack.nes" hash="d84f9293b7f0b4d7f18579e0ad9a512192947cef"/>
+	<test rom="11-jmp_jsr.nes" hash="7c2df4afef3f027d6140373d1548bb98fc4ad7f1"/>
+	<test rom="12-rts.nes" hash="6237759356bec16ccbcefc74fe1c2c7b4b87cf77"/>
+	<test rom="13-rti.nes" hash="87a471849f0e7eda5efde5986e10b3b9767b3ed0"/>
+	<test rom="14-brk.nes" hash="9e3e745c9efc55721148a7540d691cef1df1d219"/>
+	<test rom="15-special.nes" hash="120bf6d781a75d47ee50491a8620dd27d35bf455"/>
 	<test rom="cpu_timing_test.nes" hash="9176e5e990bf1b4d93ce2184c8fcb77a0ad38b21"/>
 	<test rom="cpu_interrupts.nes"/>
-	<test rom="cpu_dummy_reads.nes"/>
+	<test rom="cpu_dummy_reads.nes" hash="1f02499695713b01ba26e810666c6ba834f9b7c5"/>
 	<test rom="instr_misc.nes"/>
 
 	<!-- branch timing -->

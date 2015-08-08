@@ -20,7 +20,7 @@ class CPU implements IState
 	@:state var nmiQueued:Bool = false;
 	@:state var prevNmi:Bool = false;
 	@:state var sp:Byte = 0xFD;			// stack pointer
-	@:state var a:Byte = 0;	// a
+	@:state var a:Byte = 0;				// accumulator
 	@:state var x:Byte = 0;				// x register
 	@:state var y:Byte = 0;				// y register
 

@@ -66,9 +66,13 @@ class NES implements IEmulator implements IState
 		cpu.reset(this);
 	}
 
+	var _time:Float = 0;
 	public function frame()
 	{
-		apu.newFrame();
+		var _newTime = haxe.Timer.stamp();
+		var elapsed = _newTime - _time;
+		_time = _newTime;
+		apu.newFrame(Math.ceil(1/elapsed));
 		cpu.runFrame();
 		if (rom.sramDirty)
 		{
