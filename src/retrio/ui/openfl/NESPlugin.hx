@@ -18,23 +18,42 @@ import retrio.emu.nes.Palette;
 @:access(retrio.emu.nes.NES)
 class NESPlugin extends EmulatorPlugin
 {
+	static inline var AUDIO_BUFFER_SIZE = 0x800;
 	static var _registered = Shell.registerPlugin("nes", new NESPlugin());
 
 	var loopStart:Int = 0;
 	var loopEnd:Int = 0;
+	var clipRect:Rectangle = new Rectangle();
+
 	var clipTop(default, set):Int = 0;
 	var clipBottom(default, set):Int = 0;
+	var clipLeft(default, set):Int = 0;
+	var clipRight(default, set):Int = 0;
 	function set_clipTop(y:Int)
 	{
 		clipTop = y;
 		setClip();
+		emu.height = NES.HEIGHT - clipTop - clipBottom;
 		return y;
 	}
 	function set_clipBottom(y:Int)
 	{
 		clipBottom = y;
 		setClip();
+		emu.height = NES.HEIGHT - clipTop - clipBottom;
 		return y;
+	}
+	function set_clipLeft(x:Int)
+	{
+		clipLeft = x;
+		emu.width = NES.WIDTH - clipLeft - clipRight;
+		return x;
+	}
+	function set_clipRight(x:Int)
+	{
+		clipRight = x;
+		emu.width = NES.WIDTH - clipLeft - clipRight;
+		return x;
 	}
 	function setClip()
 	{
@@ -62,6 +81,7 @@ class NESPlugin extends EmulatorPlugin
 		super();
 
 		this.emu = this.nes = new NES();
+		this.settings = emu.settings;
 		extensions = nes.extensions;
 
 		bmpData = new BitmapData(256, 240, false, 0);
@@ -73,6 +93,8 @@ class NESPlugin extends EmulatorPlugin
 
 		clipTop = 8;
 		clipBottom = 8;
+		clipLeft = 0;
+		clipRight = 0;
 	}
 
 	override public function resize(width:Int, height:Int)
@@ -94,15 +116,16 @@ class NESPlugin extends EmulatorPlugin
 	override public function frame()
 	{
 		if (!initialized) return;
+
 		if (running)
 		{
-			nes.frame();
+			super.frame();
+			nes.frame(frameRate);
 
 			if (frameSkip > 0)
 			{
-				var skip = frameCount > 0;
 				frameCount = (frameCount + 1) % (frameSkip + 1);
-				if (skip) return;
+				if (frameCount > 0) return;
 			}
 
 			var bm = nes.buffer;
@@ -116,7 +139,7 @@ class NESPlugin extends EmulatorPlugin
 			bmpData.lock();
 			canvas.lock();
 			bmpData.setPixels(r, pixels);
-			canvas.draw(bmpData, m);
+			canvas.draw(bmpData, m, null, null, clipRect, smooth);
 			canvas.unlock();
 			bmpData.unlock();
 		}
@@ -129,6 +152,7 @@ class NESPlugin extends EmulatorPlugin
 
 	override public function deactivate()
 	{
+		nes.apu.buffer.clear();
 		nes.saveSram();
 	}
 
@@ -138,8 +162,13 @@ class NESPlugin extends EmulatorPlugin
 		bmp = new Bitmap(canvas);
 		addChild(bmp);
 
-		var sx = canvas.width / 256, sy = canvas.height / (240-clipTop-clipBottom);
-		m.setTo(sx, 0, 0, sy, 0, 0);
+		var w = (256-clipLeft-clipRight);
+		var h = (240-clipTop-clipBottom);
+		var sx = canvas.width / w, sy = canvas.height / h;
+		m.setTo(sx, 0, 0, sy, -clipLeft*sx, 0);
+
+		clipRect.width = canvas.width;
+		clipRect.height = canvas.height;
 
 		initialized = true;
 	}
@@ -159,14 +188,14 @@ class NESPlugin extends EmulatorPlugin
 		var l:Int;
 		if (_buffering)
 		{
-			l = Std.int(Math.max(0, 0x800 - nes.apu.buffer.length));
+			l = Std.int(Math.max(0, AUDIO_BUFFER_SIZE * 2 - nes.apu.buffer.length));
 			if (l <= 0) _buffering = false;
-			else l = 0x800;
+			else l = AUDIO_BUFFER_SIZE;
 		}
 		else
 		{
 			// not enough samples; buffer until more arrive
-			l = Std.int(Math.max(0, 0x800 - nes.apu.buffer.length));
+			l = Std.int(Math.max(0, AUDIO_BUFFER_SIZE - nes.apu.buffer.length));
 			if (l > 0)
 			{
 				_buffering = true;
@@ -179,10 +208,19 @@ class NESPlugin extends EmulatorPlugin
 		}
 
 		var s:Float = 0;
-		for (i in l ... 0x800)
+		for (i in l ... AUDIO_BUFFER_SIZE)
 		{
-			e.data.writeFloat(s = (Util.clamp(nes.apu.buffer.pop() * 0xf, 0, 1)));
+			e.data.writeFloat(s = (volume * Util.clamp(nes.apu.buffer.pop() * 0xf, 0, 1)));
 			e.data.writeFloat(s);
+		}
+	}
+
+	override public function setSetting(name:String, value:Dynamic):Void
+	{
+		switch (name)
+		{
+			default:
+				super.setSetting(name, value);
 		}
 	}
 }

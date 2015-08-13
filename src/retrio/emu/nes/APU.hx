@@ -14,11 +14,11 @@ class APU implements IState
 	// currently OpenFL on native, like Flash, does not support non-44100 sample rates
 	public static inline var SAMPLE_RATE:Int = 44100;//#if flash 44100 #else 48000 #end;
 	public static inline var NATIVE_SAMPLE_RATE:Int = Std.int(341*262*60/2);
-	public static inline var NATIVE_SAMPLE_RATIO:Int = 4;
+	public static inline var NATIVE_SAMPLE_RATIO:Int = 2;
 	static inline var SEQUENCER_RATE4:Int = 14915;
 	static inline var SEQUENCER_RATE5:Int = 18641;
 	static inline var BUFFER_LENGTH:Int = 0x8000;
-	static inline var FILTER_ORDER = #if flash 63 #else 1023 #end;
+	static inline var FILTER_ORDER = 63;
 
 	public static var lengthCounterTable:Vector<Int> = Vector.fromArrayCopy([
 		10,254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
@@ -30,7 +30,7 @@ class APU implements IState
 
 	public var buffer:SoundBuffer;		// mono output
 
-	public var frameRate:Int = 60;
+	var playRate:Float = 1;
 
 	@:state var mode:Bool = false;		// true: 5 step, false: 4 step
 
@@ -48,8 +48,8 @@ class APU implements IState
 
 	@:state var cycles:Int = 0;
 	var sampleCounter:Int = 0;
-	var sampleSync:Int = 0;
-	var samplesThisFrame:Int = 0;
+	var sampleSync:Float = 0;
+	var sampleStepSize:Float = SAMPLE_RATE * NATIVE_SAMPLE_RATIO;
 	var cycleSkip:Int = NATIVE_SAMPLE_RATIO;
 
 	// sample data for interpolation
@@ -79,10 +79,10 @@ class APU implements IState
 		this.memory = memory;
 	}
 
-	public function newFrame(frameRate:Int)
+	public function newFrame(rate:Float)
 	{
-		this.frameRate = frameRate;
-		samplesThisFrame -= SAMPLE_RATE;
+		playRate = 60/rate;
+		sampleStepSize = SAMPLE_RATE * NATIVE_SAMPLE_RATIO * playRate;
 	}
 
 	public inline function read(addr:Int):Int
@@ -299,32 +299,24 @@ class APU implements IState
 		if (++sampleCounter >= cycleSkip)
 		{
 			sampleCounter -= cycleSkip;
-			sampleSync += SAMPLE_RATE * NATIVE_SAMPLE_RATIO;
+			sampleSync += sampleStepSize;
 
 			getSoundOut();
 			filter.addSample(s);
 
-			if (NATIVE_SAMPLE_RATE - sampleSync < SAMPLE_RATE * NATIVE_SAMPLE_RATIO)
+			if (NATIVE_SAMPLE_RATE - sampleSync < sampleStepSize)
 			{
-				if (samplesThisFrame < SAMPLE_RATE)
+				if (t == null)
 				{
-					if (t == null)
-					{
-						sPrev = filter.getSample();
-						t = (NATIVE_SAMPLE_RATE - sampleSync) / (SAMPLE_RATE * NATIVE_SAMPLE_RATIO);
-					}
-					else
-					{
-						samplesThisFrame += frameRate;
-
-						buffer.push(Util.lerp(sPrev, filter.getSample(), t));
-
-						sampleSync -= NATIVE_SAMPLE_RATE;
-					}
+					sPrev = filter.getSample();
+					t = (NATIVE_SAMPLE_RATE - sampleSync) / (sampleStepSize);
 				}
 				else
 				{
+					buffer.push(Util.lerp(sPrev, filter.getSample(), t));
+
 					sampleSync -= NATIVE_SAMPLE_RATE;
+					t = null;
 				}
 			}
 		}
@@ -332,10 +324,10 @@ class APU implements IState
 
 	inline function getSoundOut()
 	{
-		var p1 = ch1Enabled ? pulse1.play() : 0;
-		var p2 = ch2Enabled ? pulse2.play() : 0;
-		var s1 = ch3Enabled ? triangle.play() : 0;
-		var s2 = ch4Enabled ? noise.play() : 0;
+		var p1 = ch1Enabled ? pulse1.play(playRate) : 0;
+		var p2 = ch2Enabled ? pulse2.play(playRate) : 0;
+		var s1 = ch3Enabled ? triangle.play(playRate) : 0;
+		var s2 = ch4Enabled ? noise.play(playRate) : 0;
 		var s3 = ch5Enabled ? 0 : 0;//dmc.play();
 		s = 0;
 		if (p1 + p2 != 0) s += 95.88 / ((8128 / (p1 + p2)) + 100);

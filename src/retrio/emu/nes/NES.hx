@@ -11,7 +11,7 @@ class NES implements IEmulator implements IState
 	@:stateChildren static var stateChildren = ['cpu', 'ram', 'rom', 'ppu', 'apu', 'mapper'];
 
 	public static inline var WIDTH = 256;
-	public static inline var HEIGHT = 224;
+	public static inline var HEIGHT = 240;
 	// minimum # of frames to wait between saves
 	public static inline var SRAM_SAVE_FRAMES = 60;
 
@@ -30,6 +30,8 @@ class NES implements IEmulator implements IState
 	public var apu:APU;
 	public var mapper:Mapper;
 	public var controllers:Vector<NESController> = new Vector(2);
+
+	public var settings:Array<SettingCategory> = GlobalSettings.settings.concat(Settings.settings);
 
 	var _saveCounter:Int = 0;
 	@:state var romName:String;
@@ -66,14 +68,11 @@ class NES implements IEmulator implements IState
 		cpu.reset(this);
 	}
 
-	var _time:Float = 0;
-	public function frame()
+	public function frame(rate:Float)
 	{
-		var _newTime = haxe.Timer.stamp();
-		var elapsed = _newTime - _time;
-		_time = _newTime;
-		apu.newFrame(Math.ceil(1/elapsed));
+		apu.newFrame(rate);
 		cpu.runFrame();
+
 		if (rom.sramDirty)
 		{
 			if (_saveCounter < SRAM_SAVE_FRAMES)
