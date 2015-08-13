@@ -160,7 +160,7 @@ class NESPlugin extends EmulatorPlugin
 	{
 		canvas = new BitmapData(width, height, false, 0);
 		bmp = new Bitmap(canvas);
-		addChild(bmp);
+		addChildAt(bmp, 0);
 
 		var w = (256-clipLeft-clipRight);
 		var h = (240-clipTop-clipBottom);
