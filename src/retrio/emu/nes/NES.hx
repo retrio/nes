@@ -29,15 +29,22 @@ class NES implements IEmulator implements IState
 	public var ppu:PPU;
 	public var apu:APU;
 	public var mapper:Mapper;
-	public var controllers:Vector<NESController> = new Vector(2);
 
-	public var settings:Array<SettingCategory> = GlobalSettings.settings.concat(Settings.settings);
+	public var maxControllers:Int = 4;
+	public var controllers:Vector<NESController>;
 
 	var _saveCounter:Int = 0;
 	@:state var romName:String;
 	@:state var useSram:Bool = true;
 
-	public function new() {}
+	public function new()
+	{
+		controllers = new Vector(maxControllers);
+		for (i in 0 ... controllers.length)
+		{
+			controllers[i] = new NESController();
+		}
+	}
 
 	public function loadGame(gameData:FileWrapper, ?useSram:Bool=true)
 	{
@@ -87,29 +94,14 @@ class NES implements IEmulator implements IState
 		else _saveCounter = 0;
 	}
 
-	public function addController(controller:IController, ?port:Int=null):Null<Int>
+	public function addController(controller:IController, port:Int)
 	{
-		if (port == null)
-		{
-			for (i in 0 ... controllers.length)
-			{
-				if (controllers[i] == null)
-				{
-					port = i;
-					break;
-				}
-			}
-			if (port == null) return null;
-		}
-		else
-		{
-			if (controllers[port] != null) return null;
-		}
+		controllers[port].controller = controller;
+	}
 
-		controllers[port] = new NESController(controller);
-		controller.init(this);
-
-		return port;
+	public function removeController(port:Int)
+	{
+		controllers[port] = null;
 	}
 
 	public function getColor(c:Int)

@@ -1,5 +1,6 @@
 package retrio.ui.openfl;
 
+import haxe.ds.Vector;
 import flash.Lib;
 import flash.Memory;
 import flash.display.Sprite;
@@ -80,8 +81,14 @@ class NESPlugin extends EmulatorPlugin
 	{
 		super();
 
+		controllers = new Vector(2);
+
 		this.emu = this.nes = new NES();
-		this.settings = emu.settings;
+		this.settings = GlobalSettings.settings.concat(
+			retrio.emu.nes.Settings.settings
+		).concat(
+			NESControls.settings(this)
+		);
 		extensions = nes.extensions;
 
 		bmpData = new BitmapData(256, 240, false, 0);

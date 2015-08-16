@@ -2,7 +2,7 @@ import retrio.FileWrapper;
 import retrio.ui.openfl.NESPlugin;
 import retrio.ui.openfl.Shell;
 import retrio.ui.openfl.controllers.KeyboardController;
-import retrio.emu.nes.Button;
+import retrio.emu.nes.NESControllerButton;
 
 
 class Main extends retrio.ui.openfl.Shell
@@ -44,22 +44,14 @@ class Main extends retrio.ui.openfl.Shell
 	{
 		super.onStage(e);
 
-		var controller = new KeyboardController();
+		KeyboardController.init();
 
-		var keyDefaults:Map<Button, Int> = [
-			A => 76,
-			B => 75,
-			Select => 9,
-			Start => 13,
-			Up => 87,
-			Down => 83,
-			Left => 65,
-			Right => 68
-		];
+		var controller = new KeyboardController();
+		var keyDefaults = retrio.ui.openfl.NESControls.defaultBindings[KeyboardController.name];
 		for (btn in keyDefaults.keys())
-			controller.defineKey(keyDefaults[btn], btn);
+			controller.define(keyDefaults[btn], btn);
 
 		loadPlugin("nes");
-		addController(controller);
+		addController(controller, 0);
 	}
 }
