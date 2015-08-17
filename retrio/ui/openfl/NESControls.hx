@@ -7,7 +7,7 @@ import retrio.ui.openfl.controllers.*;
 
 class NESControls
 {
-	public static var controllerImg:String = "graphics/controllers/nes.png";
+	public static var controllerImg:String = "graphics/nes_controls.png";
 
 	// String because Class<IController> can't be used as a map key
 	public static var defaultBindings:Map<String, Map<Int, Int>> = [

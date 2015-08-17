@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
-	<source path="src"/>
-
 	<assets path="assets/graphics" rename="graphics" include="*.png" type="image" embed="true"/>
 </project>

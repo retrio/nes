@@ -15,8 +15,6 @@
 
 	<haxeflag name="-swf-version" value="11.3" if="flash"/>
 
-	<source path="src"/>
-
 	<haxelib name="retrio-core"/>
 	<assets path="assets/graphics" rename="graphics" include="*.png" type="image" embed="true"/>
 </project>
