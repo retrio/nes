@@ -222,12 +222,12 @@ class NESPlugin extends EmulatorPlugin
 		}
 	}
 
-	override public function setSetting(name:String, value:Dynamic):Void
+	override public function setSetting(id:String, value:Dynamic):Void
 	{
-		switch (name)
+		switch (id)
 		{
 			default:
-				super.setSetting(name, value);
+				super.setSetting(id, value);
 		}
 	}
 }

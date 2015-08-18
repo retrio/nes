@@ -28,7 +28,7 @@ class NESControls
 	public static function settings(plugin:NESPlugin):Array<SettingCategory>
 	{
 		return [
-			{name: "Controls", custom: {
+			{id: "Controls", name: "Controls", custom: {
 				render:ControllerSettingsPage.render.bind(
 					plugin,
 					controllerImg,

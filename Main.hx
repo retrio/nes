@@ -1,4 +1,4 @@
-import retrio.FileWrapper;
+import retrio.io.FileWrapper;
 import retrio.ui.openfl.NESPlugin;
 import retrio.ui.openfl.Shell;
 import retrio.ui.openfl.controllers.KeyboardController;

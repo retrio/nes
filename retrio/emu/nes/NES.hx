@@ -3,6 +3,8 @@ package retrio.emu.nes;
 import haxe.ds.Vector;
 import haxe.io.BytesInput;
 import haxe.io.Output;
+import retrio.io.FileWrapper;
+import retrio.io.IEnvironment;
 
 
 class NES implements IEmulator implements IState
@@ -114,7 +116,9 @@ class NES implements IEmulator implements IState
 		if (io != null)
 		{
 			var state = saveState();
-			io.writeBytesToFile(romName + ".st" + slot, state);
+			var file = io.writeFile();
+			file.writeBytes(state);
+			file.save(romName + ".st" + slot);
 		}
 	}
 
@@ -134,7 +138,10 @@ class NES implements IEmulator implements IState
 		if (useSram && rom.hasSram && rom.sramDirty && io != null)
 		{
 			var data = rom.prgRam;
-			io.writeByteStringToFile(romName + ".srm", data);
+			var file = io.writeFile();
+			file.writeByteString(data);
+			file.save(romName + ".srm");
+
 			rom.sramDirty = false;
 			_saveCounter = 0;
 		}
