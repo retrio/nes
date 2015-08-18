@@ -12,6 +12,7 @@ import flash.geom.Rectangle;
 import flash.geom.Matrix;
 import flash.utils.ByteArray;
 import flash.utils.Endian;
+import retrio.config.GlobalSettings;
 import retrio.emu.nes.NES;
 import retrio.emu.nes.Palette;
 

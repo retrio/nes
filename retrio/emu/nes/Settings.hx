@@ -1,5 +1,8 @@
 package retrio.emu.nes;
 
+import retrio.config.Setting;
+import retrio.config.SettingCategory;
+
 
 @:enum
 abstract Settings(String) from String to String

@@ -1,8 +1,9 @@
 package retrio.ui.openfl;
 
-import retrio.emu.nes.NESControllerButton;
+import retrio.config.SettingCategory;
 import retrio.ui.haxeui.ControllerSettingsPage;
 import retrio.ui.openfl.controllers.*;
+import retrio.emu.nes.NESControllerButton;
 
 
 class NESControls
