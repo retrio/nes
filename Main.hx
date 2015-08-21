@@ -45,13 +45,15 @@ class Main extends retrio.ui.openfl.Shell
 		super.onStage(e);
 
 		KeyboardController.init();
-
-		var controller = new KeyboardController();
-		var keyDefaults = retrio.ui.openfl.NESControls.defaultBindings[KeyboardController.name];
-		for (btn in keyDefaults.keys())
-			controller.define(keyDefaults[btn], btn);
-
 		loadPlugin("nes");
-		addController(controller, 0);
+
+		if (plugin.controllers[0] == null)
+		{
+			var controller = new KeyboardController();
+			var keyDefaults = retrio.ui.openfl.NESControls.defaultBindings[KeyboardController.name];
+			for (btn in keyDefaults.keys())
+				controller.define(keyDefaults[btn], btn);
+			addController(controller, 0);
+		}
 	}
 }

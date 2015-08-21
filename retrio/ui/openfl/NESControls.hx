@@ -1,6 +1,7 @@
 package retrio.ui.openfl;
 
 import retrio.config.SettingCategory;
+import retrio.config.CustomSetting;
 import retrio.ui.haxeui.ControllerSettingsPage;
 import retrio.ui.openfl.controllers.*;
 import retrio.emu.nes.NESControllerButton;
@@ -29,7 +30,7 @@ class NESControls
 	public static function settings(plugin:NESPlugin):Array<SettingCategory>
 	{
 		return [
-			{id: "Controls", name: "Controls", custom: {
+			{id: "Controls", name: "Controls", custom: new CustomSetting({
 				render:ControllerSettingsPage.render.bind(
 					plugin,
 					controllerImg,
@@ -37,8 +38,10 @@ class NESControls
 					NESControllerButton.buttonNames,
 					ControllerInfo.controllerTypes
 				),
-				save:ControllerSettingsPage.save.bind(plugin)
-			}},
+				save:ControllerSettingsPage.save.bind(plugin),
+				serialize:ControllerSettingsPage.serialize.bind(plugin),
+				unserialize:ControllerSettingsPage.unserialize.bind(plugin, ControllerInfo.controllerTypes),
+			})},
 		];
 	}
 }

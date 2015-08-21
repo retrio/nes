@@ -20,8 +20,10 @@ import retrio.emu.nes.Palette;
 @:access(retrio.emu.nes.NES)
 class NESPlugin extends EmulatorPlugin
 {
+	static var _name:String = "nes";
+
 	static inline var AUDIO_BUFFER_SIZE = 0x800;
-	static var _registered = Shell.registerPlugin("nes", new NESPlugin());
+	static var _registered = Shell.registerPlugin(_name, new NESPlugin());
 
 	var loopStart:Int = 0;
 	var loopEnd:Int = 0;
