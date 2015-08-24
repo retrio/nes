@@ -26,7 +26,6 @@ class NES implements IEmulator implements IState
 	public var screenBuffer(default, set):IScreenBuffer;
 	function set_screenBuffer(screenBuffer:IScreenBuffer)
 	{
-		screenBuffer.colorTransform = getColor;
 		return this.screenBuffer = screenBuffer;
 	}
 
@@ -110,7 +109,7 @@ class NES implements IEmulator implements IState
 		controllers[port] = null;
 	}
 
-	public function getColor(c:Int)
+	public inline function getColor(c:Int)
 	{
 		return Palette.getColor(c);
 	}

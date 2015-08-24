@@ -403,16 +403,8 @@ class PPU implements IState
 					// rendering is off; draw either the background color or
 					// if the PPU address points to the palette, draw that color
 					var bgcolor = ((vramAddr > 0x3f00 && vramAddr < 0x3fff) ? mapper.ppuRead(vramAddr) : pal.get(0));
-					screenBuffer.pset(bufferOffset, bgcolor);
+					pset(bufferOffset, bgcolor);
 				}
-
-				// greyscale
-				if (greyscale)
-				{
-					screenBuffer.pset(bufferOffset, screenBuffer.pget(bufferOffset) & 0x30);
-				}
-				// color emphasis
-				screenBuffer.pset(bufferOffset, (screenBuffer.pget(bufferOffset) & 0x3f) | emph);
 			}
 		}
 
@@ -537,7 +529,7 @@ class PPU implements IState
 		if (!bgClip && (bufferOffset & 0xff) < 8)
 		{
 			// left clip
-			screenBuffer.pset(bufferOffset, pal.get(0));
+			pset(bufferOffset, pal.get(0));
 			isBG = true;
 		}
 		else
@@ -547,7 +539,7 @@ class PPU implements IState
 			var bgPal = (Util.getbitI(bgAttrShiftRegH, 8 - xScroll) << 1)
 					+ Util.getbitI(bgAttrShiftRegL, 8 - xScroll);
 			isBG = (bgPix == 0);
-			screenBuffer.pset(bufferOffset, (isBG ? pal.get(0) : pal.get((bgPal << 2) + bgPix)));
+			pset(bufferOffset, (isBG ? pal.get(0) : pal.get((bgPal << 2) + bgPix)));
 		}
 		return isBG;
 	}
@@ -698,7 +690,7 @@ class PPU implements IState
 			}
 			if (!spriteBgFlags[index] || bgflag)
 			{
-				screenBuffer.pset(bufferOffset + x, pal.get(spritepals[index] + sprpxl));
+				pset(bufferOffset + x, pal.get(spritepals[index] + sprpxl));
 			}
 		}
 	}
@@ -728,5 +720,17 @@ class PPU implements IState
 				return base & 3;
 			}
 		}
+	}
+
+	inline function pset(addr:Int, value:Int)
+	{
+		// greyscale
+		if (greyscale)
+		{
+			value &= 0x30;
+		}
+		// color emphasis
+		value = (value & 0x3f) | emph;
+		screenBuffer.pset(addr, nes.getColor(value));
 	}
 }
