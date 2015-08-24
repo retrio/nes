@@ -2,6 +2,7 @@ package retrio.emu.nes;
 
 import haxe.ds.Vector;
 import retrio.ByteString;
+import retrio.io.IScreenBuffer;
 
 
 @:build(retrio.macro.Optimizer.build())
@@ -15,8 +16,12 @@ class PPU implements IState
 		0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08
 	];
 
+	public var nes:NES;
 	public var mapper:Mapper;
 	public var cpu:CPU;
+	var screenBuffer(get, never):IScreenBuffer;
+	inline function get_screenBuffer() return nes.screenBuffer;
+
 	@:state public var frameCount:Int = 1;
 	@:state public var stolenCycles:Int = 0;
 	@:state public var finished:Bool = false;
@@ -33,7 +38,6 @@ class PPU implements IState
 	@:state public var oam:ByteString = new ByteString(0x100);
 	@:state public var nameTables:Vector<ByteString> = new Vector(4);
 	@:state public var pal:ByteString = new ByteString(32);
-	public var screenBuffer:ByteString = new ByteString(240 * 256);
 
 	@:state public var scanline:Int = 0;
 	@:state public var cycles:Int = 1;
@@ -98,15 +102,15 @@ class PPU implements IState
 		return bgRender || sprRender;
 	}
 
-	public function new(mapper:Mapper, cpu:CPU)
+	public function new(nes:NES, mapper:Mapper, cpu:CPU)
 	{
+		this.nes = nes;
 		this.mapper = mapper;
 		mapper.ppu = this;
 
 		this.cpu = cpu;
 
 		oam.fillWith(0xff);
-		screenBuffer.fillWith(0);
 		for (i in 0 ... 4)
 		{
 			nameTables[i] = new ByteString(0x400);
@@ -399,15 +403,16 @@ class PPU implements IState
 					// rendering is off; draw either the background color or
 					// if the PPU address points to the palette, draw that color
 					var bgcolor = ((vramAddr > 0x3f00 && vramAddr < 0x3fff) ? mapper.ppuRead(vramAddr) : pal.get(0));
-					screenBuffer.set(bufferOffset, bgcolor);
+					screenBuffer.pset(bufferOffset, bgcolor);
 				}
+
 				// greyscale
 				if (greyscale)
 				{
-					screenBuffer.set(bufferOffset, screenBuffer.get(bufferOffset) & 0x30);
+					screenBuffer.pset(bufferOffset, screenBuffer.pget(bufferOffset) & 0x30);
 				}
 				// color emphasis
-				screenBuffer.set(bufferOffset, (screenBuffer.get(bufferOffset) & 0x3f) | emph);
+				screenBuffer.pset(bufferOffset, (screenBuffer.pget(bufferOffset) & 0x3f) | emph);
 			}
 		}
 
@@ -532,7 +537,7 @@ class PPU implements IState
 		if (!bgClip && (bufferOffset & 0xff) < 8)
 		{
 			// left clip
-			screenBuffer.set(bufferOffset, pal.get(0));
+			screenBuffer.pset(bufferOffset, pal.get(0));
 			isBG = true;
 		}
 		else
@@ -542,7 +547,7 @@ class PPU implements IState
 			var bgPal = (Util.getbitI(bgAttrShiftRegH, 8 - xScroll) << 1)
 					+ Util.getbitI(bgAttrShiftRegL, 8 - xScroll);
 			isBG = (bgPix == 0);
-			screenBuffer.set(bufferOffset, (isBG ? pal.get(0) : pal.get((bgPal << 2) + bgPix)));
+			screenBuffer.pset(bufferOffset, (isBG ? pal.get(0) : pal.get((bgPal << 2) + bgPix)));
 		}
 		return isBG;
 	}
@@ -693,7 +698,7 @@ class PPU implements IState
 			}
 			if (!spriteBgFlags[index] || bgflag)
 			{
-				screenBuffer.set(bufferOffset + x, pal.get(spritepals[index] + sprpxl));
+				screenBuffer.pset(bufferOffset + x, pal.get(spritepals[index] + sprpxl));
 			}
 		}
 	}

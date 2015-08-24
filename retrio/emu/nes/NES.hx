@@ -5,6 +5,7 @@ import haxe.io.BytesInput;
 import haxe.io.Output;
 import retrio.io.FileWrapper;
 import retrio.io.IEnvironment;
+import retrio.io.IScreenBuffer;
 
 
 class NES implements IEmulator implements IState
@@ -21,8 +22,13 @@ class NES implements IEmulator implements IState
 	public var height:Int = HEIGHT;
 
 	public var io:IEnvironment;
-	public var buffer:ByteString;
 	public var extensions:Array<String> = ["*.nes"];
+	public var screenBuffer(default, set):IScreenBuffer;
+	function set_screenBuffer(screenBuffer:IScreenBuffer)
+	{
+		screenBuffer.colorTransform = getColor;
+		return this.screenBuffer = screenBuffer;
+	}
 
 	// hardware components
 	public var cpu:CPU;
@@ -56,7 +62,7 @@ class NES implements IEmulator implements IState
 		mapper = rom.mapper;
 
 		cpu = new CPU(ram);
-		ppu = new PPU(mapper, cpu);
+		ppu = new PPU(this, mapper, cpu);
 		apu = new APU();
 
 		ram.init(mapper, ppu, apu, controllers);
@@ -64,8 +70,6 @@ class NES implements IEmulator implements IState
 		mapper.onLoad();
 		apu.init(cpu, ram);
 		cpu.init(this, ppu);
-
-		buffer = ppu.screenBuffer;
 
 		romName = gameData.name;
 		this.useSram = useSram;
